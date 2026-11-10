@@ -57,6 +57,10 @@ export class SyncManager {
     this.views.push(view);
   }
 
+  removeView(view: DiagramView): void {
+    this.views = this.views.filter((v) => v !== view);
+  }
+
   /** 반영됐으면 true. 문법 오류이거나 더 새 변경에 밀려 버려졌으면 false. */
   async onTextChanged(text: string): Promise<boolean> {
     this.currentText = text;
