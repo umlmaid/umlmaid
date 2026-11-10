@@ -7,6 +7,7 @@
 // - sourceId = 화살표 꼬리 쪽, targetId = 화살표 머리(◁, ◆, ◇, >) 쪽.
 //   예: `A <|-- B` → source B, target A (B가 A를 상속)
 // - 다중성: `"1" --> "*"` → sourceMultiplicity "1", targetMultiplicity "*" (UML처럼 양 끝에 따로)
+// - `<<interface>>`(몸통 안이든 `<<interface>> A` 한 줄이든) → ClassNode.stereotype 'interface'. 적은 그대로 담는다.
 // - 이 도구가 그리지 않는 문법(note, style, direction 등)은 오류 없이 넘어간다.
 import { AbstractDiagram } from '../../domain/model/diagram';
 import { RelationEdge } from '../../domain/model/edges';
@@ -25,7 +26,9 @@ const RELATION = new RegExp(
 );
 const CLASS_DECL = new RegExp(String.raw`^class\s+(${NAME})(?:\s*\["([^"]*)"\])?\s*(\{)?\s*(\})?$`, 'u');
 const MEMBER = new RegExp(String.raw`^(${NAME})\s*:\s*(.+)$`, 'u');
-const ANNOTATION = new RegExp(String.raw`^<<[^>]+>>\s*(${NAME})$`, 'u');
+const ANNOTATION = new RegExp(String.raw`^<<\s*([^>]+?)\s*>>\s*(${NAME})$`, 'u');
+/** 몸통 안의 `<<interface>>` 한 줄 */
+const STEREOTYPE_LINE = /^<<\s*([^>]+?)\s*>>$/;
 const NAMESPACE_OPEN = /^namespace\s+[\p{L}\p{N}_.\-]+\s*\{$/u;
 const IGNORED = /^(direction|style|classDef|cssClass|click|callback|link|accTitle|accDescr|title|note)\b/;
 const BLOCK_IGNORED = /^accDescr\s*\{/;
@@ -35,6 +38,7 @@ interface ClassDraft {
   label: string;
   attributes: string[];
   methods: string[];
+  stereotype: string;
 }
 
 export function parseClassDiagram(lines: SourceLine[]): ParseResult {
@@ -50,7 +54,7 @@ export function parseClassDiagram(lines: SourceLine[]): ParseResult {
 
   const ensureClass = (rawName: string): string => {
     const id = baseName(rawName);
-    if (!classes.has(id)) classes.set(id, { label: genericLabel(rawName), attributes: [], methods: [] });
+    if (!classes.has(id)) classes.set(id, { label: genericLabel(rawName), attributes: [], methods: [], stereotype: '' });
     else if (rawName.includes('~')) classes.get(id)!.label = genericLabel(rawName);
     return id;
   };
@@ -64,7 +68,9 @@ export function parseClassDiagram(lines: SourceLine[]): ParseResult {
     }
 
     if (body) {
+      const stereotype = STEREOTYPE_LINE.exec(text);
       if (text === '}') body = undefined;
+      else if (stereotype) classes.get(body.id)!.stereotype = stereotype[1];
       else if (!text.startsWith('<<')) addMember(classes.get(body.id)!, text);
       continue;
     }
@@ -106,7 +112,7 @@ export function parseClassDiagram(lines: SourceLine[]): ParseResult {
 
     const annotation = ANNOTATION.exec(text);
     if (annotation) {
-      ensureClass(annotation[1]);
+      classes.get(ensureClass(annotation[2]))!.stereotype = annotation[1];
       continue;
     }
 
@@ -119,7 +125,7 @@ export function parseClassDiagram(lines: SourceLine[]): ParseResult {
 
   if (errors.length > 0) return { errors };
 
-  const nodes = [...classes].map(([id, c]) => new ClassNode(id, c.label, c.attributes, c.methods));
+  const nodes = [...classes].map(([id, c]) => new ClassNode(id, c.label, c.attributes, c.methods, c.stereotype));
   return { diagram: new AbstractDiagram(DiagramType.CLASS, nodes, edges), errors: [] };
 }
 

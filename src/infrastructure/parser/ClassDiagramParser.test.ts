@@ -64,17 +64,32 @@ describe('클래스 다이어그램: 노드 (FR-01-1)', () => {
     expect(n.label).toBe('동물');
   });
 
-  it('<<interface>> 표기와 :::css 표기는 오류 없이 넘어간다', () => {
+  it('<<interface>>는 stereotype으로, 멤버에는 섞이지 않는다', () => {
     const d = parseOk(`classDiagram
       class Shape {
         <<interface>>
         +draw()
       }
       <<abstract>> Base
+      << enumeration >> Color
+      class Plain
       class Styled:::someclass`);
+    const stereo = (id: string) => (d.getNode(id) as ClassNode).stereotype;
     expect((d.getNode('Shape') as ClassNode).methods).toEqual(['+draw()']);
-    expect(d.getNode('Base')).toBeDefined();
+    expect((d.getNode('Shape') as ClassNode).attributes).toEqual([]);
+    expect(stereo('Shape')).toBe('interface');
+    expect(stereo('Base')).toBe('abstract');
+    expect(stereo('Color')).toBe('enumeration');
+    expect(stereo('Plain')).toBe('');
     expect(d.getNode('Styled')).toBeDefined();
+  });
+
+  it('stereotype은 선언 순서와 상관없이 붙는다 (관계 먼저, 표기 나중)', () => {
+    const d = parseOk(`classDiagram
+      Shape <|.. Circle
+      <<Interface>> Shape`);
+    expect((d.getNode('Shape') as ClassNode).stereotype).toBe('Interface');
+    expect(d.nodes.map((n) => n.id)).toEqual(['Shape', 'Circle']);
   });
 });
 
