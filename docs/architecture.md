@@ -175,7 +175,7 @@
 | --- | --- | --- |
 | D-01 | ~~ImageExporter가 CanvasRenderer를 의존해 계층 규칙에 어긋남~~ | **해결:** CanvasRenderer 객체 대신 화면에 그려진 SVG 요소를 넘긴다(`export(canvasSvg, format, scale)`). |
 | D-02 | ~~Snapshot 적용 메서드 없음~~ | **해결:** `SyncManager.restore(snapshot)` 추가 |
-| D-03 | Snapshot을 언제 저장하는지 규칙이 없다. 코드는 한 글자마다 바뀐다. | 드래그·간선 수정·고정 해제는 매번 저장한다. 코드는 입력이 0.5초 멈췄을 때 저장한다. |
+| D-03 | ~~Snapshot 저장 시점~~ | **결정:** 드래그·간선 수정·고정 해제는 반영될 때마다 저장한다. 코드는 파싱에 성공하고 입력이 0.5초 멈췄을 때 저장한다(`Workspace.ts`). |
 | D-04 | ~~좌표 저장 위치~~ | **결정:** 같은 파일 맨 끝 한 줄 `%% @umlmaid-layout {JSON}` |
 | D-05 | ~~레이아웃 엔진 구현 방식~~ | **결정:** elkjs 사용 |
 | D-06 | ~~실행 환경·언어~~ | **결정:** TypeScript + React + Vite (웹) |
