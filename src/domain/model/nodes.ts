@@ -14,6 +14,11 @@ export class ClassNode extends AbstractNode {
     label: string,
     readonly attributes: string[] = [],
     readonly methods: string[] = [],
+    /**
+     * << >> 안의 글자. 예: 'interface', 'abstract', 'enumeration'. 없으면 ''.
+     * 화면은 이름 위에 «interface»처럼 그린다(인터뷰 Q5 UML 표준, FR-05-6).
+     */
+    readonly stereotype: string = '',
   ) {
     super(id, label);
   }

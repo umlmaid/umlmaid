@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { LayoutMetadata } from './metadata/LayoutMetadata';
 import { AbstractDiagram } from './model/diagram';
+import { RelationEdge } from './model/edges';
 import { ClassNode } from './model/nodes';
 import { DiagramType, RelationType } from './model/types';
 import { FakeLayoutEngine } from '../testing/fakes';
@@ -26,5 +27,21 @@ describe('가짜 레이아웃 엔진', () => {
     const diagram = new AbstractDiagram(DiagramType.CLASS, [new ClassNode('A', 'A')]);
     const result = await new FakeLayoutEngine().applyLayout(diagram, new LayoutMetadata());
     expect(result.nodePositions.has('A')).toBe(true);
+  });
+});
+
+describe('UML 표준 표기에 필요한 정보 (인터뷰 Q5)', () => {
+  it('클래스는 스테레오타입을 담는다 (FR-05-6)', () => {
+    expect(new ClassNode('Shape', 'Shape', [], [], 'interface').stereotype).toBe('interface');
+    expect(new ClassNode('A', 'A').stereotype).toBe('');
+  });
+
+  it('관계는 다중성을 양 끝에 따로 담는다', () => {
+    const edge = new RelationEdge('A-ASSOCIATION-B', 'A', 'B', RelationType.ASSOCIATION, {
+      sourceMultiplicity: '1',
+      targetMultiplicity: '0..*',
+      label: 'owns',
+    });
+    expect([edge.sourceMultiplicity, edge.targetMultiplicity, edge.label]).toEqual(['1', '0..*', 'owns']);
   });
 });
