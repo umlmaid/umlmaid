@@ -1,0 +1,28 @@
+# 폴더별 담당 모듈. 아래 줄이 위 줄보다 우선한다.
+# 이 폴더를 건드리는 PR에는 담당 팀에게 리뷰 요청이 자동으로 간다.
+
+# 기본: 통합 책임(M4)
+*                                   @umlmaid/m4
+
+# M1 파서·모델
+/src/domain/model/                  @umlmaid/m1
+/src/infrastructure/parser/         @umlmaid/m1
+
+# M2 레이아웃 엔진
+/src/domain/layout/                 @umlmaid/m2
+
+# M3 좌표 메타데이터 + 드래그
+/src/domain/metadata/               @umlmaid/m3
+
+# M4 동기화·흐름
+/src/application/                   @umlmaid/m4
+
+# M5 화면
+/src/presentation/                  @umlmaid/m5
+/src/presentation/DragController.ts @umlmaid/m3
+
+# M6 저장·버전·내보내기
+/src/application/VersionHistory.ts  @umlmaid/m6
+/src/application/Snapshot.ts        @umlmaid/m6
+/src/infrastructure/file/           @umlmaid/m6
+/src/infrastructure/export/         @umlmaid/m6

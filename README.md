@@ -21,11 +21,12 @@ TypeScript · React · Vite · elkjs(자동 배치) · Vitest
 
 | GitHub | 담당 모듈 |
 | --- | --- |
-| @ricky00-dev | |
-| @jenny2e | |
-| @cjs09446-byte | |
-| @eunc61 | |
-| @inconcluso | |
+| @ricky00-dev | M4 동기화·흐름 (통합 책임) |
+| @jenny2e | M1 파서·모델 |
+| @cjs09446-byte | M3 좌표 메타데이터 + 드래그 |
+| @eunc61 | M5 화면 |
+| @inconcluso | M2 레이아웃 엔진 |
+| (합류 예정) | M6 저장·버전·내보내기 |
 
 ## 진행 상황
 

@@ -19,12 +19,22 @@ Node.js 22 이상이 필요합니다.
 | --- | --- | --- |
 | M1 파서·모델 | `src/domain/model`, `src/infrastructure/parser` | Mermaid 코드 → AbstractDiagram |
 | M2 레이아웃 엔진 | `src/domain/layout` | 자동 배치 (elkjs). 고정 노드는 움직이지 않음 |
-| M3 좌표 메타데이터 | `src/domain/metadata` | 좌표·고정 여부·수동 간선 경로 |
+| M3 좌표 메타데이터 | `src/domain/metadata`, `src/presentation/DragController.ts` | 좌표·고정 여부·수동 간선 경로, 캔버스 드래그 입력 처리 |
 | M4 동기화·흐름 | `src/application` (Workspace, SyncManager, DiagramView) | 전체 연결, 통합 책임 |
-| M5 화면 | `src/presentation` | 코드 편집기, 캔버스 |
+| M5 화면 | `src/presentation` (DragController 제외) | 코드 편집기, 캔버스 그리기, 줌, 버튼 |
 | M6 저장·버전·내보내기 | `src/application` (VersionHistory, Snapshot), `src/infrastructure/file`, `src/infrastructure/export` | 파일, 실행취소, PNG·JPEG |
 
 구현할 곳은 `todo('Mn')`으로 표시되어 있습니다. 자기 모듈의 `todo`를 채우면 됩니다.
+
+폴더별 담당자는 [`.github/CODEOWNERS`](.github/CODEOWNERS)에 있습니다. PR이 그 폴더를 건드리면 담당자에게 리뷰 요청이 자동으로 갑니다.
+
+### 리뷰 짝
+
+데이터가 직접 오가는 모듈끼리 서로 리뷰합니다. 짝이 바쁘면 M4 담당이 리뷰합니다.
+
+- M1 ↔ M2
+- M3 ↔ M5
+- M4 ↔ M6
 
 ## 지켜야 할 약속
 
