@@ -215,6 +215,7 @@ classDiagram
     class ClassNode {
         -attributes : List~String~
         -methods : List~String~
+        -stereotype : String
     }
 
     class ParticipantNode {
@@ -223,7 +224,8 @@ classDiagram
 
     class RelationEdge {
         -relationType : RelationType
-        -multiplicity : String
+        -sourceMultiplicity : String
+        -targetMultiplicity : String
     }
 
     class MessageEdge {

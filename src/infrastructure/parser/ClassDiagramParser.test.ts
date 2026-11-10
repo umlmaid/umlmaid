@@ -99,7 +99,7 @@ describe('클래스 다이어그램: 관계 6종 (FR-05-6)', () => {
   it('다중성과 레이블을 읽는다', () => {
     const [e] = edges(`classDiagram
       Customer "1" --> "*" Ticket : buys`);
-    expect(e.multiplicity).toBe('1..*');
+    expect([e.sourceMultiplicity, e.targetMultiplicity]).toEqual(['1', '*']);
     expect(e.label).toBe('buys');
   });
 
