@@ -25,6 +25,7 @@ TypeScript · React · Vite · elkjs(자동 배치) · Vitest
 | @jenny2e | |
 | @cjs09446-byte | |
 | @eunc61 | |
+| @inconcluso | |
 
 ## 진행 상황
 
