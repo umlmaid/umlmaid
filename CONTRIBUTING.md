@@ -31,7 +31,7 @@ Node.js 22 이상이 필요합니다.
 ## 지켜야 할 약속
 
 1. **계층 규칙.** `presentation → application → infrastructure → domain` 방향으로만 import한다. `domain`은 다른 폴더를 import하지 않는다.
-2. **공통 타입은 함부로 바꾸지 않는다.** `src/domain/**`의 타입과 `LayoutEngine`, `DiagramView` 인터페이스는 모든 모듈이 쓴다. 바꾸려면 PR에 그 타입을 쓰는 모듈 담당자를 리뷰어로 넣는다.
+2. **공통 타입은 함부로 바꾸지 않는다.** `src/domain/**`의 타입과 `LayoutEngine`, `DiagramView` 인터페이스는 모든 모듈이 쓴다. 바꾸려면 그 타입을 쓰는 모듈 담당자에게 먼저 알린다.
 3. **마우스 조작은 Mermaid 코드를 바꾸지 않는다.** 좌표는 `LayoutMetadata`에만 쓴다.
 4. **객체 생성은 코드로만.** 캔버스에서 노드·관계를 만들지 않는다.
 5. **좌표 단위는 픽셀**(캔버스 100% 배율 기준)이다.
