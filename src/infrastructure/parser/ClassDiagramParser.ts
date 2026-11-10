@@ -6,7 +6,7 @@
 // - 간선 id = `${sourceId}-${RelationType}-${targetId}`, 같은 조합이 또 나오면 `#1`, `#2`...
 // - sourceId = 화살표 꼬리 쪽, targetId = 화살표 머리(◁, ◆, ◇, >) 쪽.
 //   예: `A <|-- B` → source B, target A (B가 A를 상속)
-// - 다중성: `"1" --> "*"` → "1..*" (source쪽..target쪽). 한쪽만 있으면 "1.." / "..*"
+// - 다중성: `"1" --> "*"` → sourceMultiplicity "1", targetMultiplicity "*" (UML처럼 양 끝에 따로)
 // - 이 도구가 그리지 않는 문법(note, style, direction 등)은 오류 없이 넘어간다.
 import { AbstractDiagram } from '../../domain/model/diagram';
 import { RelationEdge } from '../../domain/model/edges';
@@ -151,8 +151,11 @@ function toEdge(
   edgeIdCount.set(baseId, n + 1);
   const id = n === 0 ? baseId : `${baseId}#${n}`;
 
-  const multiplicity = sourceCard || targetCard ? `${sourceCard}..${targetCard}` : '';
-  return new RelationEdge(id, sourceId, targetId, type, multiplicity, label.trim());
+  return new RelationEdge(id, sourceId, targetId, type, {
+    sourceMultiplicity: sourceCard,
+    targetMultiplicity: targetCard,
+    label: label.trim(),
+  });
 }
 
 function relationType(head: string | undefined, dashed: boolean): RelationType {
