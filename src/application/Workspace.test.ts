@@ -64,11 +64,14 @@ describe('실행취소·다시실행', () => {
     expect(sync.metadata.getPosition('A')).toMatchObject({ x: 500, y: 300, isPinned: true });
   });
 
-  it('첫 변경도 되돌려 빈 문서로 돌아간다', async () => {
+  it('첫 변경도 되돌려 빈 문서로 돌아가고, 그림도 비워진다', async () => {
     const { sync, workspace } = setup();
+    const view = { onDiagramUpdated: vi.fn(), onParseError: vi.fn(), onTextRestored: vi.fn() };
+    sync.addView(view);
     await workspace.editCode('class A');
     await workspace.undo();
     expect(sync.text).toBe('');
+    expect(view.onDiagramUpdated.mock.lastCall![0].nodes).toEqual([]);
   });
 
   it('되돌린 뒤 새로 고치면 다시실행 기록은 버려진다', async () => {
