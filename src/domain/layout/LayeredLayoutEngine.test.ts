@@ -23,8 +23,8 @@ const overlap = (a: NodePosition, b: NodePosition) =>
 describe('LayoutEngineFactory', () => {
   it('종류에 맞는 엔진을 돌려준다', () => {
     const f = new LayoutEngineFactory();
-    expect(f.forType(DiagramType.CLASS)).toBeInstanceOf(LayeredLayoutEngine);
-    expect(f.forType(DiagramType.SEQUENCE)).toBeInstanceOf(SequenceLayoutEngine);
+    expect(f.getEngine(DiagramType.CLASS)).toBeInstanceOf(LayeredLayoutEngine);
+    expect(f.getEngine(DiagramType.SEQUENCE)).toBeInstanceOf(SequenceLayoutEngine);
   });
 });
 
