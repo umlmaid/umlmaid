@@ -32,7 +32,7 @@
 | --- | --- | --- |
 | ① Presentation | 보여주고 입력받기만 한다. 데이터를 직접 바꾸지 않는다. | TextEditor, CanvasRenderer |
 | ② Application | 입력을 받아 어떤 순서로 처리할지 정한다. | Workspace, SyncManager, DiagramView, VersionHistory, Snapshot |
-| ③ Infrastructure | 바깥 형식(Mermaid 텍스트, 파일, 이미지)과 내부 데이터를 서로 바꾼다. | MermaidParser, ParseResult, ParseError, FileManager, DiagramData, ImageExporter, ImageFormat |
+| ③ Infrastructure | 바깥 형식(Mermaid 텍스트, 파일, 이미지)과 내부 데이터를 서로 바꾼다. | MermaidParser, ParseResult, SyntaxError, FileManager, DiagramData, ImageExporter, ImageFormat |
 | ④ Domain | 다이어그램 데이터와 배치 규칙. 이 도구의 핵심이다. | AbstractDiagram 계층, DiagramType, RelationType, LayoutMetadata, NodePosition, EdgeRoute, Point, LayoutEngine 계층, LayoutEngineFactory, LayoutResult |
 
 ### 2.2 계층 규칙
@@ -88,14 +88,14 @@
 - `mergeMetadata()`가 이 도구의 핵심 기능이다. 다시 파싱해도 기존 노드의 좌표·고정 정보를 유지하고, 삭제된 노드의 정보는 정리한다.
 
 **Observer: DiagramView**
-- SyncManager는 `views: List<DiagramView>`에 등록된 화면들에 `onDiagramUpdated()`와 `onParseError()`를 알린다.
+- SyncManager는 `views: List<DiagramView>`에 등록된 화면들에 `onDiagramUpdated()`와 `onSyntaxError()`를 알린다.
 - CanvasRenderer는 그림을 다시 그리고, TextEditor는 오류 줄을 표시한다.
 - 나중에 화면이 추가돼도(예: 미리보기 창) SyncManager는 고치지 않는다.
 
 **Strategy + Factory: LayoutEngine, LayoutEngineFactory**
 - 공통 규약: `applyLayout(diagram, metadata)`.
 - 두 엔진 모두 **`metadata`에서 `isPinned = true`인 노드의 좌표는 바꾸지 않는다.** 이 규칙은 인터페이스 수준의 약속이라, 엔진을 새로 추가해도 반드시 지켜야 한다(FR-04-2).
-- `LayoutEngineFactory.forType(DiagramType)`이 CLASS면 Layered, SEQUENCE면 Sequence 엔진을 돌려준다.
+- `LayoutEngineFactory.getEngine(DiagramType)`이 CLASS면 Layered, SEQUENCE면 Sequence 엔진을 돌려준다.
 
 **Memento: Snapshot, VersionHistory**
 - Snapshot은 `textState`(Mermaid 코드)와 `metadataState`(좌표 JSON)를 함께 담는다.
@@ -151,7 +151,7 @@
 
 | 모듈 | 계층 | 클래스 | 외부에 제공하는 것 | 의존하는 모듈 | 요구사항 | 담당 |
 | --- | --- | --- | --- | --- | --- | --- |
-| M1 파서·모델 | ③④ | MermaidParser, ParseResult, ParseError, AbstractDiagram 계층, DiagramType, RelationType | `parse(text) → ParseResult` | 없음 | FR-01-1~3, FR-05, FR-08 | |
+| M1 파서·모델 | ③④ | MermaidParser, ParseResult, SyntaxError, AbstractDiagram 계층, DiagramType, RelationType | `parse(text) → ParseResult` | 없음 | FR-01-1~3, FR-05, FR-08 | |
 | M2 레이아웃 엔진 | ④ | LayoutEngine, LayeredLayoutEngine, SequenceLayoutEngine, LayoutEngineFactory, LayoutResult | `applyLayout(diagram, metadata) → LayoutResult` | M1, M3 | FR-04-1~3, NFR-01 | |
 | M3 좌표 메타데이터 | ④ | LayoutMetadata, NodePosition, EdgeRoute, Point | 좌표·고정·간선경로 읽기/쓰기, JSON 변환 | M1 | FR-04-2·4·7, DF-02 | |
 | M4 동기화·흐름 | ② | Workspace, SyncManager, DiagramView | 화면용 메서드 전체, `onDiagramUpdated` 알림 | M1, M2, M3, M6 | FR-03, NFR-02 | |

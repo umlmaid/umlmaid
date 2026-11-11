@@ -40,13 +40,18 @@ classDiagram
         +moveNode(nodeId: String, x: double, y: double) void
         +updateEdgeRoute(edgeId: String, waypoints: List~Point~) void
         +unpinNode(nodeId: String) void
+        %% [11/11 최종 문서] 전체 고정 해제(FR-04-4), 버튼 활성화 여부
+        +unpinAll() void
+        +canUndo() boolean
+        +canRedo() boolean
     }
 
     %% [10/14 수정 5] 화면 갱신용 Observer 인터페이스 신설
     class DiagramView {
         <<interface · Observer>>
         +onDiagramUpdated(diagram: AbstractDiagram, layout: LayoutResult) void
-        +onParseError(errors: List~ParseError~) void
+        +onParseError(errors: List~SyntaxError~) void
+        +onTextRestored(text: String) void
     }
 
     class TextEditor {
@@ -75,8 +80,9 @@ classDiagram
         +onTextChanged(text: String) void
         +onCanvasNodeMoved(nodeId: String, x: double, y: double) void
         %% [10/14 수정 3] 간선 수정·고정 해제 처리를 SyncManager로 일원화
-        +onEdgeRouteChanged(edgeId: String, waypoints: List~Point~) void
-        +onUnpin(nodeId: String) void
+        +onCanvasEdgeRouteChanged(edgeId: String, waypoints: List~Point~) void
+        +unpinNode(nodeId: String) void
+        +unpinAll() void
         -mergeMetadata(oldMeta: LayoutMetadata, newDiagram: AbstractDiagram) LayoutMetadata
         -notifyViews(diagram: AbstractDiagram, layout: LayoutResult) void
     }
@@ -88,6 +94,8 @@ classDiagram
         +push(snapshot: Snapshot) void
         +undo() Snapshot
         +redo() Snapshot
+        +canUndo() boolean
+        +canRedo() boolean
         %% [10/14 보완] 특정 버전 복원·목록
         +restore(id: String) Snapshot
         +list() List~Snapshot~
@@ -136,8 +144,8 @@ classDiagram
         +isManual : boolean
     }
 
-    %% [10/14 보완] SyntaxError → ParseError (JavaScript 내장 클래스명과 충돌 방지)
-    class ParseError {
+    %% [11/11 최종 문서] 이름을 SyntaxError로 통일 (코드에서는 import type으로만 쓴다)
+    class SyntaxError {
         +line : int
         +column : int
         +message : String
@@ -145,7 +153,7 @@ classDiagram
 
     class ParseResult {
         +diagram : AbstractDiagram
-        +errors : List~ParseError~
+        +errors : List~SyntaxError~
         +isSuccess() boolean
     }
 
@@ -168,7 +176,7 @@ classDiagram
     %% [10/14 수정 4] 다이어그램 종류에 맞는 레이아웃 엔진 생성
     class LayoutEngineFactory {
         <<Factory>>
-        +forType(type: DiagramType) LayoutEngine
+        +getEngine(type: DiagramType) LayoutEngine
     }
 
     class LayoutEngine {
@@ -271,7 +279,7 @@ classDiagram
     LayoutEngine "1" ..> "1" LayoutResult : produces
 
     MermaidParser "1" ..> "1" ParseResult : produces
-    ParseResult "1" *-- "*" ParseError : contains
+    ParseResult "1" *-- "*" SyntaxError : contains
     ParseResult "1" o-- "0..1" AbstractDiagram : contains
 
     %% Metadata & Layout Result Dependencies

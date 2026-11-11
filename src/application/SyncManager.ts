@@ -9,9 +9,11 @@ import { LayoutEngineFactory } from '../domain/layout/LayoutEngineFactory';
 import type { LayoutResult } from '../domain/layout/LayoutResult';
 import type { Point } from '../domain/metadata/geometry';
 import { LayoutMetadata } from '../domain/metadata/LayoutMetadata';
-import type { AbstractDiagram } from '../domain/model/diagram';
+import { AbstractDiagram } from '../domain/model/diagram';
+import { DiagramType } from '../domain/model/types';
 import { MermaidParser } from '../infrastructure/parser/MermaidParser';
 import { isSuccess } from '../infrastructure/parser/ParseResult';
+import { toSourceLines } from '../infrastructure/parser/lines';
 import type { DiagramView } from './DiagramView';
 import type { Snapshot } from './Snapshot';
 
@@ -64,6 +66,7 @@ export class SyncManager {
   /** 반영됐으면 true. 문법 오류이거나 더 새 변경에 밀려 버려졌으면 false. */
   async onTextChanged(text: string): Promise<boolean> {
     this.currentText = text;
+    if (toSourceLines(text).length === 0) return this.clear();
     const result = this.parser.parse(text);
     if (!isSuccess(result)) {
       this.revision++; // 진행 중인 옛 배치 결과가 오류 표시를 덮지 않게 한다
@@ -85,27 +88,36 @@ export class SyncManager {
   }
 
   /** 간선 꺾임점을 손으로 고쳤을 때. 이후 재배치에서도 유지된다(FR-04-7). */
-  async onEdgeRouteChanged(edgeId: string, waypoints: Point[]): Promise<boolean> {
+  async onCanvasEdgeRouteChanged(edgeId: string, waypoints: Point[]): Promise<boolean> {
     if (!this.currentDiagram?.edges.some((e) => e.id === edgeId)) return false;
     this.currentMetadata.setEdgeRoute(edgeId, { waypoints, isManual: true });
     return this.relayout();
   }
 
   /** 고정을 풀어 자동 배치로 돌린다(FR-04-4). */
-  async onUnpin(nodeId: string): Promise<boolean> {
+  async unpinNode(nodeId: string): Promise<boolean> {
     if (!this.currentMetadata.getPosition(nodeId)) return false;
     this.currentMetadata.setPinned(nodeId, false);
     return this.relayout();
   }
 
+  /** 모든 노드의 고정을 풀어 자동 배치로 돌린다(FR-04-4). 고정된 노드가 없으면 false. */
+  async unpinAll(): Promise<boolean> {
+    const pinned = (this.currentDiagram?.nodes ?? []).filter((n) => this.currentMetadata.getPosition(n.id)?.isPinned);
+    if (pinned.length === 0) return false;
+    for (const node of pinned) this.currentMetadata.setPinned(node.id, false);
+    return this.relayout();
+  }
+
   /** 실행취소·버전 복원 시 Snapshot을 적용한다(설계서 D-02) */
-  restore(snapshot: Snapshot): Promise<boolean> {
+  restoreState(snapshot: Snapshot): Promise<boolean> {
     return this.load(snapshot.textState, snapshot.metadataState);
   }
 
   /** 코드와 좌표를 통째로 바꾼다. 파일 열기와 복원에 쓴다. */
   load(text: string, metadataJson: string): Promise<boolean> {
     this.currentMetadata = this.metadataFactory.fromJson(metadataJson);
+    for (const view of this.views) view.onTextRestored(text);
     return this.onTextChanged(text);
   }
 
@@ -123,11 +135,22 @@ export class SyncManager {
     return merged;
   }
 
+  /** 코드가 비었으면(주석만 있어도) 오류가 아니라 빈 그림이다. 실행취소로 빈 문서에 돌아갔을 때 옛 그림이 남지 않게 한다. */
+  private clear(): boolean {
+    this.revision++;
+    const diagram = new AbstractDiagram(DiagramType.CLASS);
+    this.currentDiagram = diagram;
+    this.currentMetadata = this.metadataFactory.create();
+    this.lastLayout = { nodePositions: new Map(), edgeRoutes: new Map() };
+    this.notifyViews(diagram, this.lastLayout);
+    return true;
+  }
+
   private async relayout(): Promise<boolean> {
     const diagram = this.currentDiagram;
     if (!diagram) return false;
     const rev = ++this.revision;
-    const engine = this.layoutEngineFactory.forType(diagram.type);
+    const engine = this.layoutEngineFactory.getEngine(diagram.type);
     const layout = await engine.applyLayout(diagram, this.currentMetadata);
     if (rev !== this.revision) return false;
     this.lastLayout = layout;

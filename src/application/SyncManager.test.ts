@@ -7,7 +7,7 @@ import { SyncManager } from './SyncManager';
 
 function setup(engine: LayoutEngine = new FakeLayoutEngine()) {
   const sync = new SyncManager(new FakeParser(), new FakeLayoutEngineFactory(engine), inMemoryMetadataFactory);
-  const view = { onDiagramUpdated: vi.fn(), onParseError: vi.fn() } satisfies DiagramView;
+  const view = { onDiagramUpdated: vi.fn(), onParseError: vi.fn(), onTextRestored: vi.fn() } satisfies DiagramView;
   sync.addView(view);
   const lastLayout = (): LayoutResult => view.onDiagramUpdated.mock.lastCall![1];
   return { sync, view, lastLayout };
@@ -72,7 +72,7 @@ describe('마우스 변경', () => {
   it('손으로 고친 간선 경로는 코드를 고쳐도 유지된다 (FR-04-7)', async () => {
     const { sync, lastLayout } = setup();
     await sync.onTextChanged('class A\nclass B\nA --> B');
-    await sync.onEdgeRouteChanged('A-->B', [{ x: 50, y: 200 }]);
+    await sync.onCanvasEdgeRouteChanged('A-->B', [{ x: 50, y: 200 }]);
     await sync.onTextChanged('class A\nclass B\nclass C\nA --> B');
     expect(lastLayout().edgeRoutes.get('A-->B')).toEqual({ waypoints: [{ x: 50, y: 200 }], isManual: true });
   });
@@ -81,8 +81,19 @@ describe('마우스 변경', () => {
     const { sync, lastLayout } = setup();
     await sync.onTextChanged('class A');
     await sync.onCanvasNodeMoved('A', 500, 300);
-    expect(await sync.onUnpin('A')).toBe(true);
+    expect(await sync.unpinNode('A')).toBe(true);
     expect(lastLayout().nodePositions.get('A')).toMatchObject({ x: 0, y: 0, isPinned: false });
+  });
+
+  it('전체 고정 해제: 고정된 노드를 모두 자동 배치로 되돌린다 (FR-04-4)', async () => {
+    const { sync, lastLayout } = setup();
+    await sync.onTextChanged('class A\nclass B');
+    expect(await sync.unpinAll()).toBe(false);
+    await sync.onCanvasNodeMoved('A', 500, 300);
+    await sync.onCanvasNodeMoved('B', 700, 300);
+    expect(await sync.unpinAll()).toBe(true);
+    expect(lastLayout().nodePositions.get('A')).toMatchObject({ x: 0, y: 0, isPinned: false });
+    expect(lastLayout().nodePositions.get('B')).toMatchObject({ x: 200, y: 0, isPinned: false });
   });
 
   it('없는 노드·간선에 대한 마우스 이벤트는 무시한다', async () => {
@@ -90,9 +101,20 @@ describe('마우스 변경', () => {
     expect(await sync.onCanvasNodeMoved('A', 1, 1)).toBe(false);
     await sync.onTextChanged('class A');
     expect(await sync.onCanvasNodeMoved('Z', 1, 1)).toBe(false);
-    expect(await sync.onEdgeRouteChanged('A-->Z', [])).toBe(false);
-    expect(await sync.onUnpin('A')).toBe(false);
+    expect(await sync.onCanvasEdgeRouteChanged('A-->Z', [])).toBe(false);
+    expect(await sync.unpinNode('A')).toBe(false);
     expect(view.onDiagramUpdated).toHaveBeenCalledOnce();
+  });
+});
+
+describe('빈 코드', () => {
+  it('코드를 다 지우면 오류가 아니라 빈 그림이 된다', async () => {
+    const { sync, view, lastLayout } = setup();
+    await sync.onTextChanged('class A');
+    expect(await sync.onTextChanged('  \n%% 주석만\n')).toBe(true);
+    expect(view.onParseError).not.toHaveBeenCalled();
+    expect(view.onDiagramUpdated.mock.lastCall![0].nodes).toEqual([]);
+    expect(lastLayout().nodePositions.size).toBe(0);
   });
 });
 
@@ -124,10 +146,19 @@ describe('복원', () => {
     const saved = { id: 's', textState: sync.text, metadataState: sync.metadata.toJson(), timestamp: new Date() };
 
     await sync.onTextChanged('class A\nclass B');
-    await sync.onUnpin('A');
-    await sync.restore(saved);
+    await sync.unpinNode('A');
+    await sync.restoreState(saved);
 
     expect(sync.text).toBe('class A');
     expect(lastLayout().nodePositions.get('A')).toMatchObject({ x: 500, y: 300, isPinned: true });
+  });
+
+  it('복원할 때만 편집기 글자를 바꾸라고 알린다. 코드 입력·드래그로는 알리지 않는다 (FR-03-2)', async () => {
+    const { sync, view } = setup();
+    await sync.onTextChanged('class A');
+    await sync.onCanvasNodeMoved('A', 500, 300);
+    expect(view.onTextRestored).not.toHaveBeenCalled();
+    await sync.restoreState({ id: 's', textState: 'class B', metadataState: '', timestamp: new Date() });
+    expect(view.onTextRestored).toHaveBeenCalledWith('class B');
   });
 });

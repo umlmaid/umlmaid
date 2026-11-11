@@ -1,6 +1,6 @@
 // 담당: M1 파서·모델
 // 파서들이 함께 쓰는 줄 단위 도구.
-import type { ParseError } from './ParseResult';
+import type { SyntaxError } from './ParseResult';
 
 export interface SourceLine {
   /** 1부터 시작하는 줄 번호 */
@@ -35,6 +35,6 @@ export function toSourceLines(text: string): SourceLine[] {
   return result;
 }
 
-export function errorAt(src: SourceLine, message: string): ParseError {
+export function errorAt(src: SourceLine, message: string): SyntaxError {
   return { line: src.line, column: src.column, message };
 }

@@ -25,6 +25,21 @@ export class VersionHistory {
     return todo('M6');
   }
 
+  /** undo()가 Snapshot을 돌려줄 수 있으면 true */
+  canUndo(): boolean {
+    return todo('M6');
+  }
+
+  /** redo()가 Snapshot을 돌려줄 수 있으면 true */
+  canRedo(): boolean {
+    return todo('M6');
+  }
+
+  /** 기록을 모두 지운다. 다른 파일을 열 때 쓴다. */
+  reset(): void {
+    todo('M6');
+  }
+
   restore(id: string): Snapshot | undefined {
     return todo('M6');
   }

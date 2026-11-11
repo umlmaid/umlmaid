@@ -13,7 +13,7 @@ import { RelationEdge } from '../domain/model/edges';
 import { ClassNode } from '../domain/model/nodes';
 import { DiagramType, RelationType } from '../domain/model/types';
 import { MermaidParser } from '../infrastructure/parser/MermaidParser';
-import type { ParseError, ParseResult } from '../infrastructure/parser/ParseResult';
+import type { SyntaxError, ParseResult } from '../infrastructure/parser/ParseResult';
 
 /** 노드를 가로로 한 줄에 늘어놓는다. 고정된 노드와 수동 간선 경로는 그대로 둔다. */
 export class FakeLayoutEngine implements LayoutEngine {
@@ -41,7 +41,7 @@ export class FakeLayoutEngineFactory extends LayoutEngineFactory {
     super();
   }
 
-  override forType(): LayoutEngine {
+  override getEngine(): LayoutEngine {
     return this.engine;
   }
 }
@@ -56,7 +56,7 @@ export class FakeParser extends MermaidParser {
   override parse(text: string): ParseResult {
     const nodes: ClassNode[] = [];
     const edges: RelationEdge[] = [];
-    const errors: ParseError[] = [];
+    const errors: SyntaxError[] = [];
     text.split('\n').forEach((raw, i) => {
       const line = raw.trim();
       let m: RegExpMatchArray | null;
@@ -135,6 +135,19 @@ export class InMemoryVersionHistory extends VersionHistory {
   override redo(): Snapshot | undefined {
     if (this.current >= this.stack.length - 1) return undefined;
     return this.stack[++this.current];
+  }
+
+  override canUndo(): boolean {
+    return this.current > 0;
+  }
+
+  override canRedo(): boolean {
+    return this.current < this.stack.length - 1;
+  }
+
+  override reset(): void {
+    this.stack.length = 0;
+    this.current = -1;
   }
 
   override list(): Snapshot[] {
