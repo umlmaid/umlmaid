@@ -41,7 +41,7 @@ export class FakeLayoutEngineFactory extends LayoutEngineFactory {
     super();
   }
 
-  override forType(): LayoutEngine {
+  override getEngine(): LayoutEngine {
     return this.engine;
   }
 }
@@ -135,6 +135,14 @@ export class InMemoryVersionHistory extends VersionHistory {
   override redo(): Snapshot | undefined {
     if (this.current >= this.stack.length - 1) return undefined;
     return this.stack[++this.current];
+  }
+
+  override canUndo(): boolean {
+    return this.current > 0;
+  }
+
+  override canRedo(): boolean {
+    return this.current < this.stack.length - 1;
   }
 
   override list(): Snapshot[] {
