@@ -30,27 +30,27 @@ export class Workspace {
     const applied = await this.syncManager.onTextChanged(text);
     if (!applied) return;
     clearTimeout(this.codeSnapshotTimer);
-    this.codeSnapshotTimer = setTimeout(() => this.recordSnapshot(), CODE_SNAPSHOT_DELAY_MS);
+    this.codeSnapshotTimer = setTimeout(() => this.captureSnapshot(), CODE_SNAPSHOT_DELAY_MS);
   }
 
   async moveNode(nodeId: string, x: number, y: number): Promise<void> {
     this.flushPendingCodeSnapshot();
-    if (await this.syncManager.onCanvasNodeMoved(nodeId, x, y)) this.recordSnapshot();
+    if (await this.syncManager.onCanvasNodeMoved(nodeId, x, y)) this.captureSnapshot();
   }
 
   async updateEdgeRoute(edgeId: string, waypoints: Point[]): Promise<void> {
     this.flushPendingCodeSnapshot();
-    if (await this.syncManager.onEdgeRouteChanged(edgeId, waypoints)) this.recordSnapshot();
+    if (await this.syncManager.onCanvasEdgeRouteChanged(edgeId, waypoints)) this.captureSnapshot();
   }
 
   async unpinNode(nodeId: string): Promise<void> {
     this.flushPendingCodeSnapshot();
-    if (await this.syncManager.onUnpin(nodeId)) this.recordSnapshot();
+    if (await this.syncManager.unpinNode(nodeId)) this.captureSnapshot();
   }
 
   async unpinAll(): Promise<void> {
     this.flushPendingCodeSnapshot();
-    if (await this.syncManager.onUnpinAll()) this.recordSnapshot();
+    if (await this.syncManager.unpinAll()) this.captureSnapshot();
   }
 
   /** 실행취소·다시실행 버튼을 켤지 정할 때 쓴다 */
@@ -64,28 +64,27 @@ export class Workspace {
 
   async undo(): Promise<void> {
     this.flushPendingCodeSnapshot();
-    const snapshot = this.history.undo();
-    if (snapshot) await this.syncManager.restore(snapshot);
+    await this.restoreSnapshot(this.history.undo());
   }
 
   async redo(): Promise<void> {
     this.flushPendingCodeSnapshot();
-    const snapshot = this.history.redo();
-    if (snapshot) await this.syncManager.restore(snapshot);
+    await this.restoreSnapshot(this.history.redo());
   }
 
   /** 문법 오류가 있어도 편집기에 있는 코드 그대로 저장한다 */
   saveProject(): Blob {
-    return this.fileManager.save({
-      code: this.syncManager.text,
-      metadata: this.syncManager.metadata.toJson(),
-    });
+    return this.fileManager.save(this.syncManager.text, this.syncManager.metadata.toJson());
   }
 
+  /** 다른 파일을 열면 이전 파일의 실행취소 기록은 버린다. 연 상태가 첫 기록이 된다. */
   async loadProject(file: File): Promise<void> {
     const data = await this.fileManager.load(file);
     clearTimeout(this.codeSnapshotTimer);
-    if (await this.syncManager.load(data.code, data.metadata)) this.recordSnapshot();
+    this.codeSnapshotTimer = undefined;
+    if (!(await this.syncManager.load(data.code, data.metadata))) return;
+    this.history.reset();
+    this.pushSnapshot(this.syncManager.text, this.syncManager.metadata.toJson());
   }
 
   exportToImage(canvasSvg: SVGSVGElement, format: ImageFormat): Promise<Blob> {
@@ -97,10 +96,14 @@ export class Workspace {
     if (this.codeSnapshotTimer === undefined) return;
     clearTimeout(this.codeSnapshotTimer);
     this.codeSnapshotTimer = undefined;
-    this.recordSnapshot();
+    this.captureSnapshot();
   }
 
-  private recordSnapshot(): void {
+  private async restoreSnapshot(snapshot: Snapshot | undefined): Promise<void> {
+    if (snapshot) await this.syncManager.restoreState(snapshot);
+  }
+
+  private captureSnapshot(): void {
     this.codeSnapshotTimer = undefined;
     // 첫 변경도 되돌릴 수 있게 빈 문서 상태를 맨 앞에 둔다
     if (this.snapshotCount === 0) this.pushSnapshot('', '');

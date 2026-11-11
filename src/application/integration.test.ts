@@ -10,7 +10,7 @@ import { SyncManager } from './SyncManager';
 
 function setup() {
   const sync = new SyncManager(new MermaidParser(), new FakeLayoutEngineFactory(), inMemoryMetadataFactory);
-  const view = { onDiagramUpdated: vi.fn(), onParseError: vi.fn() } satisfies DiagramView;
+  const view = { onDiagramUpdated: vi.fn(), onParseError: vi.fn(), onTextRestored: vi.fn() } satisfies DiagramView;
   sync.addView(view);
   const lastLayout = (): LayoutResult => view.onDiagramUpdated.mock.lastCall![1];
   return { sync, view, lastLayout };
@@ -42,7 +42,7 @@ describe('M1 파서 + M4 흐름', () => {
     const { sync, lastLayout } = setup();
     await sync.onTextChanged('classDiagram\n  A --> B');
     const [edge] = [...lastLayout().edgeRoutes.keys()];
-    await sync.onEdgeRouteChanged(edge, [{ x: 30, y: 300 }]);
+    await sync.onCanvasEdgeRouteChanged(edge, [{ x: 30, y: 300 }]);
     await sync.onTextChanged('classDiagram\n  A --> B\n  class C');
     expect(lastLayout().edgeRoutes.get(edge)).toEqual({ waypoints: [{ x: 30, y: 300 }], isManual: true });
   });

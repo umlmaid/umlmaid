@@ -5,6 +5,7 @@ import {
   InMemoryVersionHistory,
   inMemoryMetadataFactory,
 } from '../testing/fakes';
+import type { FileManager } from '../infrastructure/file/FileManager';
 import { SyncManager } from './SyncManager';
 import { CODE_SNAPSHOT_DELAY_MS, Workspace } from './Workspace';
 
@@ -105,5 +106,18 @@ describe('실행취소·다시실행', () => {
     expect(workspace.canRedo).toBe(true);
     await workspace.editCode('class B');
     expect(workspace.canRedo).toBe(false);
+  });
+
+  it('다른 파일을 열면 이전 기록은 버리고, 연 상태에서 더 되돌아가지 않는다', async () => {
+    const sync = new SyncManager(new FakeParser(), new FakeLayoutEngineFactory(), inMemoryMetadataFactory);
+    const history = new InMemoryVersionHistory();
+    const files = { load: async () => ({ code: 'class Z', metadata: '' }) } as unknown as FileManager;
+    const workspace = new Workspace(sync, history, files);
+    await workspace.editCode('class A');
+    vi.advanceTimersByTime(CODE_SNAPSHOT_DELAY_MS);
+    await workspace.loadProject(new File([], 'z.mmd'));
+    expect(history.list().map((s) => s.textState)).toEqual(['class Z']);
+    await workspace.undo();
+    expect(sync.text).toBe('class Z');
   });
 });
