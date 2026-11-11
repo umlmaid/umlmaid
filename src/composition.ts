@@ -3,15 +3,16 @@
 // 모듈이 완성되면 해당 줄을 진짜 부품으로 바꾼다. 다른 파일은 고치지 않아도 된다.
 import { SyncManager } from './application/SyncManager';
 import { Workspace } from './application/Workspace';
+import { LayoutEngineFactory } from './domain/layout/LayoutEngineFactory';
 import { ImageExporter } from './infrastructure/export/ImageExporter';
 import { FileManager } from './infrastructure/file/FileManager';
 import { MermaidParser } from './infrastructure/parser/MermaidParser';
-import { FakeLayoutEngineFactory, InMemoryVersionHistory, inMemoryMetadataFactory } from './testing/fakes';
+import { InMemoryVersionHistory, inMemoryMetadataFactory } from './testing/fakes';
 
 export function createWorkspace(): Workspace {
   const sync = new SyncManager(
-    new MermaidParser(), // M1 진짜 (클래스 다이어그램만, 시퀀스는 작업 중)
-    new FakeLayoutEngineFactory(), // TODO(M2): new LayoutEngineFactory()
+    new MermaidParser(), // M1 진짜
+    new LayoutEngineFactory(), // M2 진짜
     inMemoryMetadataFactory, // TODO(M3): 기본값(진짜 LayoutMetadata)을 쓰도록 이 인자를 지운다
   );
   return new Workspace(
