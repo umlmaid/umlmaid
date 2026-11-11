@@ -81,4 +81,29 @@ describe('실행취소·다시실행', () => {
     await workspace.redo();
     expect(sync.text).toBe('class A\nclass B');
   });
+
+  it('전체 고정 해제도 한 번에 되돌린다', async () => {
+    const { sync, workspace } = setup();
+    await workspace.editCode('class A\nclass B');
+    await workspace.moveNode('A', 500, 300);
+    await workspace.moveNode('B', 700, 300);
+    await workspace.unpinAll();
+    expect(sync.metadata.getPosition('A')?.isPinned).toBe(false);
+    await workspace.undo();
+    expect(sync.metadata.getPosition('A')?.isPinned).toBe(true);
+    expect(sync.metadata.getPosition('B')?.isPinned).toBe(true);
+  });
+
+  it('버튼 상태: 대기 중인 코드 기록도 되돌릴 수 있고, 그동안은 다시실행이 꺼진다', async () => {
+    const { workspace } = setup();
+    expect(workspace.canUndo).toBe(false);
+    await workspace.editCode('class A');
+    expect(workspace.canUndo).toBe(true);
+    vi.advanceTimersByTime(CODE_SNAPSHOT_DELAY_MS);
+    await workspace.undo();
+    expect(workspace.canUndo).toBe(false);
+    expect(workspace.canRedo).toBe(true);
+    await workspace.editCode('class B');
+    expect(workspace.canRedo).toBe(false);
+  });
 });

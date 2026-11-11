@@ -6,7 +6,7 @@ import type { LayoutEngine } from './LayoutEngine';
 import { SequenceLayoutEngine } from './SequenceLayoutEngine';
 
 export class LayoutEngineFactory {
-  forType(type: DiagramType): LayoutEngine {
+  getEngine(type: DiagramType): LayoutEngine {
     switch (type) {
       case DiagramType.CLASS:
         return new LayeredLayoutEngine();

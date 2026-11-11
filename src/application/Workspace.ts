@@ -48,6 +48,20 @@ export class Workspace {
     if (await this.syncManager.onUnpin(nodeId)) this.recordSnapshot();
   }
 
+  async unpinAll(): Promise<void> {
+    this.flushPendingCodeSnapshot();
+    if (await this.syncManager.onUnpinAll()) this.recordSnapshot();
+  }
+
+  /** 실행취소·다시실행 버튼을 켤지 정할 때 쓴다 */
+  get canUndo(): boolean {
+    return this.codeSnapshotTimer !== undefined || this.history.canUndo();
+  }
+
+  get canRedo(): boolean {
+    return this.codeSnapshotTimer === undefined && this.history.canRedo();
+  }
+
   async undo(): Promise<void> {
     this.flushPendingCodeSnapshot();
     const snapshot = this.history.undo();

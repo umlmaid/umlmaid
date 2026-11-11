@@ -85,6 +85,17 @@ describe('마우스 변경', () => {
     expect(lastLayout().nodePositions.get('A')).toMatchObject({ x: 0, y: 0, isPinned: false });
   });
 
+  it('전체 고정 해제: 고정된 노드를 모두 자동 배치로 되돌린다 (FR-04-4)', async () => {
+    const { sync, lastLayout } = setup();
+    await sync.onTextChanged('class A\nclass B');
+    expect(await sync.onUnpinAll()).toBe(false);
+    await sync.onCanvasNodeMoved('A', 500, 300);
+    await sync.onCanvasNodeMoved('B', 700, 300);
+    expect(await sync.onUnpinAll()).toBe(true);
+    expect(lastLayout().nodePositions.get('A')).toMatchObject({ x: 0, y: 0, isPinned: false });
+    expect(lastLayout().nodePositions.get('B')).toMatchObject({ x: 200, y: 0, isPinned: false });
+  });
+
   it('없는 노드·간선에 대한 마우스 이벤트는 무시한다', async () => {
     const { sync, view } = setup();
     expect(await sync.onCanvasNodeMoved('A', 1, 1)).toBe(false);

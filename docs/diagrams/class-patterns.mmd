@@ -40,6 +40,10 @@ classDiagram
         +moveNode(nodeId: String, x: double, y: double) void
         +updateEdgeRoute(edgeId: String, waypoints: List~Point~) void
         +unpinNode(nodeId: String) void
+        %% [11/11 최종 문서] 전체 고정 해제(FR-04-4), 버튼 활성화 여부
+        +unpinAll() void
+        +canUndo() boolean
+        +canRedo() boolean
     }
 
     %% [10/14 수정 5] 화면 갱신용 Observer 인터페이스 신설
@@ -77,6 +81,7 @@ classDiagram
         %% [10/14 수정 3] 간선 수정·고정 해제 처리를 SyncManager로 일원화
         +onEdgeRouteChanged(edgeId: String, waypoints: List~Point~) void
         +onUnpin(nodeId: String) void
+        +onUnpinAll() void
         -mergeMetadata(oldMeta: LayoutMetadata, newDiagram: AbstractDiagram) LayoutMetadata
         -notifyViews(diagram: AbstractDiagram, layout: LayoutResult) void
     }
@@ -88,6 +93,8 @@ classDiagram
         +push(snapshot: Snapshot) void
         +undo() Snapshot
         +redo() Snapshot
+        +canUndo() boolean
+        +canRedo() boolean
         %% [10/14 보완] 특정 버전 복원·목록
         +restore(id: String) Snapshot
         +list() List~Snapshot~
@@ -168,7 +175,7 @@ classDiagram
     %% [10/14 수정 4] 다이어그램 종류에 맞는 레이아웃 엔진 생성
     class LayoutEngineFactory {
         <<Factory>>
-        +forType(type: DiagramType) LayoutEngine
+        +getEngine(type: DiagramType) LayoutEngine
     }
 
     class LayoutEngine {

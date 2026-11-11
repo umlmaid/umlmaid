@@ -95,7 +95,7 @@
 **Strategy + Factory: LayoutEngine, LayoutEngineFactory**
 - 공통 규약: `applyLayout(diagram, metadata)`.
 - 두 엔진 모두 **`metadata`에서 `isPinned = true`인 노드의 좌표는 바꾸지 않는다.** 이 규칙은 인터페이스 수준의 약속이라, 엔진을 새로 추가해도 반드시 지켜야 한다(FR-04-2).
-- `LayoutEngineFactory.forType(DiagramType)`이 CLASS면 Layered, SEQUENCE면 Sequence 엔진을 돌려준다.
+- `LayoutEngineFactory.getEngine(DiagramType)`이 CLASS면 Layered, SEQUENCE면 Sequence 엔진을 돌려준다.
 
 **Memento: Snapshot, VersionHistory**
 - Snapshot은 `textState`(Mermaid 코드)와 `metadataState`(좌표 JSON)를 함께 담는다.

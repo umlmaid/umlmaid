@@ -98,6 +98,14 @@ export class SyncManager {
     return this.relayout();
   }
 
+  /** 모든 노드의 고정을 풀어 자동 배치로 돌린다(FR-04-4). 고정된 노드가 없으면 false. */
+  async onUnpinAll(): Promise<boolean> {
+    const pinned = (this.currentDiagram?.nodes ?? []).filter((n) => this.currentMetadata.getPosition(n.id)?.isPinned);
+    if (pinned.length === 0) return false;
+    for (const node of pinned) this.currentMetadata.setPinned(node.id, false);
+    return this.relayout();
+  }
+
   /** 실행취소·버전 복원 시 Snapshot을 적용한다(설계서 D-02) */
   restore(snapshot: Snapshot): Promise<boolean> {
     return this.load(snapshot.textState, snapshot.metadataState);
@@ -127,7 +135,7 @@ export class SyncManager {
     const diagram = this.currentDiagram;
     if (!diagram) return false;
     const rev = ++this.revision;
-    const engine = this.layoutEngineFactory.forType(diagram.type);
+    const engine = this.layoutEngineFactory.getEngine(diagram.type);
     const layout = await engine.applyLayout(diagram, this.currentMetadata);
     if (rev !== this.revision) return false;
     this.lastLayout = layout;
