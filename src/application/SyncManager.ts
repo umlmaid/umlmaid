@@ -9,9 +9,11 @@ import { LayoutEngineFactory } from '../domain/layout/LayoutEngineFactory';
 import type { LayoutResult } from '../domain/layout/LayoutResult';
 import type { Point } from '../domain/metadata/geometry';
 import { LayoutMetadata } from '../domain/metadata/LayoutMetadata';
-import type { AbstractDiagram } from '../domain/model/diagram';
+import { AbstractDiagram } from '../domain/model/diagram';
+import { DiagramType } from '../domain/model/types';
 import { MermaidParser } from '../infrastructure/parser/MermaidParser';
 import { isSuccess } from '../infrastructure/parser/ParseResult';
+import { toSourceLines } from '../infrastructure/parser/lines';
 import type { DiagramView } from './DiagramView';
 import type { Snapshot } from './Snapshot';
 
@@ -64,6 +66,7 @@ export class SyncManager {
   /** 반영됐으면 true. 문법 오류이거나 더 새 변경에 밀려 버려졌으면 false. */
   async onTextChanged(text: string): Promise<boolean> {
     this.currentText = text;
+    if (toSourceLines(text).length === 0) return this.clear();
     const result = this.parser.parse(text);
     if (!isSuccess(result)) {
       this.revision++; // 진행 중인 옛 배치 결과가 오류 표시를 덮지 않게 한다
@@ -130,6 +133,17 @@ export class SyncManager {
       if (route) merged.setEdgeRoute(edge.id, route);
     }
     return merged;
+  }
+
+  /** 코드가 비었으면(주석만 있어도) 오류가 아니라 빈 그림이다. 실행취소로 빈 문서에 돌아갔을 때 옛 그림이 남지 않게 한다. */
+  private clear(): boolean {
+    this.revision++;
+    const diagram = new AbstractDiagram(DiagramType.CLASS);
+    this.currentDiagram = diagram;
+    this.currentMetadata = this.metadataFactory.create();
+    this.lastLayout = { nodePositions: new Map(), edgeRoutes: new Map() };
+    this.notifyViews(diagram, this.lastLayout);
+    return true;
   }
 
   private async relayout(): Promise<boolean> {

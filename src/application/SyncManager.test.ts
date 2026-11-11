@@ -107,6 +107,17 @@ describe('마우스 변경', () => {
   });
 });
 
+describe('빈 코드', () => {
+  it('코드를 다 지우면 오류가 아니라 빈 그림이 된다', async () => {
+    const { sync, view, lastLayout } = setup();
+    await sync.onTextChanged('class A');
+    expect(await sync.onTextChanged('  \n%% 주석만\n')).toBe(true);
+    expect(view.onParseError).not.toHaveBeenCalled();
+    expect(view.onDiagramUpdated.mock.lastCall![0].nodes).toEqual([]);
+    expect(lastLayout().nodePositions.size).toBe(0);
+  });
+});
+
 describe('비동기 순서', () => {
   it('늦게 끝난 옛 배치 결과가 새 결과를 덮어쓰지 않는다', async () => {
     const fake = new FakeLayoutEngine();
