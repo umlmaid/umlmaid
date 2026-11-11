@@ -14,7 +14,7 @@ import { RelationEdge } from '../../domain/model/edges';
 import { ClassNode } from '../../domain/model/nodes';
 import { DiagramType, RelationType } from '../../domain/model/types';
 import { errorAt, type SourceLine } from './lines';
-import type { ParseError, ParseResult } from './ParseResult';
+import type { SyntaxError, ParseResult } from './ParseResult';
 
 const NAME = String.raw`[\p{L}\p{N}_]+(?:-[\p{L}\p{N}_]+)*(?:~\S*~)?`;
 const LEFT_HEAD = String.raw`<\||\*|o|<|\(\)`;
@@ -45,7 +45,7 @@ export function parseClassDiagram(lines: SourceLine[]): ParseResult {
   const classes = new Map<string, ClassDraft>();
   const edges: RelationEdge[] = [];
   const edgeIdCount = new Map<string, number>();
-  const errors: ParseError[] = [];
+  const errors: SyntaxError[] = [];
 
   /** 지금 몸통 { } 안에 있는 클래스와 그 시작 줄 */
   let body: { id: string; open: SourceLine } | undefined;

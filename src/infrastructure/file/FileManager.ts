@@ -22,7 +22,7 @@ export class FileManager {
     return todo('M6');
   }
 
-  save(data: DiagramData): Blob {
+  save(code: string, metadata: string): Blob {
     return todo('M6');
   }
 

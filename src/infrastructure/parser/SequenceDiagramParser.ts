@@ -13,7 +13,7 @@ import { MessageEdge } from '../../domain/model/edges';
 import { ParticipantNode } from '../../domain/model/nodes';
 import { DiagramType } from '../../domain/model/types';
 import { errorAt, type SourceLine } from './lines';
-import type { ParseError, ParseResult } from './ParseResult';
+import type { SyntaxError, ParseResult } from './ParseResult';
 
 const NAME = String.raw`[\p{L}\p{N}_]+(?:-(?![-x)>])[\p{L}\p{N}_]+)*`;
 // 긴 것부터: <<-->>, <<->>, -->>, ->>, -->, ->, --x, -x, --), -)
@@ -32,7 +32,7 @@ const IGNORED =
 export function parseSequenceDiagram(lines: SourceLine[]): ParseResult {
   const participants = new Map<string, string>(); // id → label, 등장 순서 유지
   const messages: MessageEdge[] = [];
-  const errors: ParseError[] = [];
+  const errors: SyntaxError[] = [];
   const blocks: SourceLine[] = [];
 
   const ensureParticipant = (id: string) => {

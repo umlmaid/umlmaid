@@ -1,12 +1,12 @@
 // 담당: M5 화면
 // 코드 편집기. 오류 줄 표시를 위해 DiagramView.onParseError를 받는다.
 // 지금은 M4가 흐름 확인용으로 넣은 임시 textarea다. 구문 강조·오류 줄 강조는 M5가 만든다(FR-01-3, FR-01-4).
-import type { ParseError } from '../infrastructure/parser/ParseResult';
+import type { SyntaxError } from '../infrastructure/parser/ParseResult';
 
 interface Props {
   value: string;
   onChange: (text: string) => void;
-  errors: ParseError[];
+  errors: SyntaxError[];
 }
 
 export function TextEditor({ value, onChange, errors }: Props) {

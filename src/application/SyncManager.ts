@@ -85,21 +85,21 @@ export class SyncManager {
   }
 
   /** 간선 꺾임점을 손으로 고쳤을 때. 이후 재배치에서도 유지된다(FR-04-7). */
-  async onEdgeRouteChanged(edgeId: string, waypoints: Point[]): Promise<boolean> {
+  async onCanvasEdgeRouteChanged(edgeId: string, waypoints: Point[]): Promise<boolean> {
     if (!this.currentDiagram?.edges.some((e) => e.id === edgeId)) return false;
     this.currentMetadata.setEdgeRoute(edgeId, { waypoints, isManual: true });
     return this.relayout();
   }
 
   /** 고정을 풀어 자동 배치로 돌린다(FR-04-4). */
-  async onUnpin(nodeId: string): Promise<boolean> {
+  async unpinNode(nodeId: string): Promise<boolean> {
     if (!this.currentMetadata.getPosition(nodeId)) return false;
     this.currentMetadata.setPinned(nodeId, false);
     return this.relayout();
   }
 
   /** 모든 노드의 고정을 풀어 자동 배치로 돌린다(FR-04-4). 고정된 노드가 없으면 false. */
-  async onUnpinAll(): Promise<boolean> {
+  async unpinAll(): Promise<boolean> {
     const pinned = (this.currentDiagram?.nodes ?? []).filter((n) => this.currentMetadata.getPosition(n.id)?.isPinned);
     if (pinned.length === 0) return false;
     for (const node of pinned) this.currentMetadata.setPinned(node.id, false);
@@ -107,13 +107,14 @@ export class SyncManager {
   }
 
   /** 실행취소·버전 복원 시 Snapshot을 적용한다(설계서 D-02) */
-  restore(snapshot: Snapshot): Promise<boolean> {
+  restoreState(snapshot: Snapshot): Promise<boolean> {
     return this.load(snapshot.textState, snapshot.metadataState);
   }
 
   /** 코드와 좌표를 통째로 바꾼다. 파일 열기와 복원에 쓴다. */
   load(text: string, metadataJson: string): Promise<boolean> {
     this.currentMetadata = this.metadataFactory.fromJson(metadataJson);
+    for (const view of this.views) view.onTextRestored(text);
     return this.onTextChanged(text);
   }
 

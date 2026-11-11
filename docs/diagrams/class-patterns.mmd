@@ -50,7 +50,8 @@ classDiagram
     class DiagramView {
         <<interface · Observer>>
         +onDiagramUpdated(diagram: AbstractDiagram, layout: LayoutResult) void
-        +onParseError(errors: List~ParseError~) void
+        +onParseError(errors: List~SyntaxError~) void
+        +onTextRestored(text: String) void
     }
 
     class TextEditor {
@@ -79,9 +80,9 @@ classDiagram
         +onTextChanged(text: String) void
         +onCanvasNodeMoved(nodeId: String, x: double, y: double) void
         %% [10/14 수정 3] 간선 수정·고정 해제 처리를 SyncManager로 일원화
-        +onEdgeRouteChanged(edgeId: String, waypoints: List~Point~) void
-        +onUnpin(nodeId: String) void
-        +onUnpinAll() void
+        +onCanvasEdgeRouteChanged(edgeId: String, waypoints: List~Point~) void
+        +unpinNode(nodeId: String) void
+        +unpinAll() void
         -mergeMetadata(oldMeta: LayoutMetadata, newDiagram: AbstractDiagram) LayoutMetadata
         -notifyViews(diagram: AbstractDiagram, layout: LayoutResult) void
     }
@@ -143,8 +144,8 @@ classDiagram
         +isManual : boolean
     }
 
-    %% [10/14 보완] SyntaxError → ParseError (JavaScript 내장 클래스명과 충돌 방지)
-    class ParseError {
+    %% [11/11 최종 문서] 이름을 SyntaxError로 통일 (코드에서는 import type으로만 쓴다)
+    class SyntaxError {
         +line : int
         +column : int
         +message : String
@@ -152,7 +153,7 @@ classDiagram
 
     class ParseResult {
         +diagram : AbstractDiagram
-        +errors : List~ParseError~
+        +errors : List~SyntaxError~
         +isSuccess() boolean
     }
 
@@ -278,7 +279,7 @@ classDiagram
     LayoutEngine "1" ..> "1" LayoutResult : produces
 
     MermaidParser "1" ..> "1" ParseResult : produces
-    ParseResult "1" *-- "*" ParseError : contains
+    ParseResult "1" *-- "*" SyntaxError : contains
     ParseResult "1" o-- "0..1" AbstractDiagram : contains
 
     %% Metadata & Layout Result Dependencies
