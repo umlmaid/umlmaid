@@ -1,5 +1,5 @@
 // 진짜 부품끼리 이어 붙인 흐름 테스트. 모듈이 완성될 때마다 가짜를 진짜로 바꿔 간다.
-// 지금 진짜: M1 파서, M4 흐름 / 가짜: M2 레이아웃, M3 메타데이터, M6 기록
+// 여기서는 레이아웃을 가짜로 둬서 좌표를 예상하기 쉽게 한다. 진짜 레이아웃은 integration-layout.test.ts
 import { describe, expect, it, vi } from 'vitest';
 import type { LayoutResult } from '../domain/layout/LayoutResult';
 import { ClassNode } from '../domain/model/nodes';
@@ -64,7 +64,7 @@ describe('M1 파서 + M4 흐름', () => {
     expect(sync.metadata.getPosition('Old')).toBeUndefined();
   });
 
-  it('30노드 파싱 + 흐름이 1초 안에 끝난다 (NFR-01, 레이아웃은 가짜라 M2 연결 후 다시 확인)', async () => {
+  it('30노드 파싱 + 흐름이 1초 안에 끝난다 (NFR-01, 진짜 레이아웃 포함은 integration-layout.test.ts)', async () => {
     const { sync, lastLayout } = setup();
     const lines = ['classDiagram'];
     for (let i = 0; i < 30; i++) {
