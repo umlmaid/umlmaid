@@ -7,13 +7,13 @@ import { LayoutEngineFactory } from './domain/layout/LayoutEngineFactory';
 import { ImageExporter } from './infrastructure/export/ImageExporter';
 import { FileManager } from './infrastructure/file/FileManager';
 import { MermaidParser } from './infrastructure/parser/MermaidParser';
-import { InMemoryVersionHistory, inMemoryMetadataFactory } from './testing/fakes';
+import { InMemoryVersionHistory } from './testing/fakes';
 
 export function createWorkspace(): Workspace {
   const sync = new SyncManager(
     new MermaidParser(), // M1 진짜
     new LayoutEngineFactory(), // M2 진짜
-    inMemoryMetadataFactory, // TODO(M3): 기본값(진짜 LayoutMetadata)을 쓰도록 이 인자를 지운다
+    // M3 진짜: 세 번째 인자를 비우면 진짜 LayoutMetadata를 쓴다
   );
   return new Workspace(
     sync,

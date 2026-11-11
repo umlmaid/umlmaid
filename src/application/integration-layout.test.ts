@@ -1,15 +1,14 @@
-// 진짜 M1 파서 + 진짜 M2 레이아웃 엔진 + M4 흐름. 회의 09-23 시나리오와 성능을 확인한다.
+// 진짜 M1 파서 + 진짜 M2 레이아웃 엔진 + 진짜 M3 좌표 + M4 흐름. 회의 09-23 시나리오와 성능을 확인한다.
 import { describe, expect, it, vi } from 'vitest';
 import { LayoutEngineFactory } from '../domain/layout/LayoutEngineFactory';
 import type { LayoutResult } from '../domain/layout/LayoutResult';
 import type { NodePosition } from '../domain/metadata/geometry';
 import { MermaidParser } from '../infrastructure/parser/MermaidParser';
-import { inMemoryMetadataFactory } from '../testing/fakes';
 import type { DiagramView } from './DiagramView';
 import { SyncManager } from './SyncManager';
 
 function setup() {
-  const sync = new SyncManager(new MermaidParser(), new LayoutEngineFactory(), inMemoryMetadataFactory);
+  const sync = new SyncManager(new MermaidParser(), new LayoutEngineFactory());
   const view = { onDiagramUpdated: vi.fn(), onParseError: vi.fn(), onTextRestored: vi.fn() } satisfies DiagramView;
   sync.addView(view);
   const lastLayout = (): LayoutResult => view.onDiagramUpdated.mock.lastCall![1];
@@ -21,7 +20,7 @@ const overlaps = (a: NodePosition, b: NodePosition) =>
 
 const ANIMALS = 'classDiagram\n  Animal <|-- Dog\n  Animal <|-- Cat\n  Animal <|-- Cow';
 
-describe('M1 파서 + M2 레이아웃 + M4 흐름', () => {
+describe('M1 파서 + M2 레이아웃 + M3 좌표 + M4 흐름', () => {
   it('30노드 클래스 다이어그램이 1초 안에 배치된다 (인터뷰 Q6, NFR-01)', async () => {
     const { sync, lastLayout } = setup();
     const lines = ['classDiagram'];
