@@ -73,6 +73,16 @@ describe('시퀀스 다이어그램: 메시지', () => {
     expect(m.label).toBe('hi');
   });
 
+  it.each([
+    ['->>', false],
+    ['-->>', false],
+    ['-)', true],
+    ['--)', true],
+  ])('%s → isAsync %s', (arrow, isAsync) => {
+    const [m] = messages(`sequenceDiagram\nA${arrow}B: hi`);
+    expect(m.isAsync).toBe(isAsync);
+  });
+
   it('order와 id는 위에서부터 0, 1, 2', () => {
     const ms = messages(`sequenceDiagram
       Alice->>John: Hello
