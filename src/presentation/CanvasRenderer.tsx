@@ -45,7 +45,7 @@ function trimStart(points: Point[], box: NodePosition): Point[] {
     return [];
 }
 
-function classRoute(source: NodePosition, target: NodePosition, bends: Point[], self: boolean): Point[] {
+export function classRoute(source: NodePosition, target: NodePosition, bends: Point[], self: boolean): Point[] {
     const start = { x: source.x + source.width / 2, y: source.y + source.height / 2 };
     const end = { x: target.x + target.width / 2, y: target.y + target.height / 2 };
     // 자동 경로가 없는 자기 관계도 상자 밖으로 돌아오게 표시한다.
@@ -150,7 +150,7 @@ export function CanvasRenderer({ diagram, layout }: Props) {
                         const reply = edge instanceof MessageEdge && edge.isReply;
                         const asyncCall = edge instanceof MessageEdge && edge.isAsync;
                         dashed = reply;
-                        // 현 MessageEdge에는 비동기 구분이 없으므로 일반 호출은 동기로 표시한다.
+                        // 응답과 비동기는 열린 화살촉, 동기는 채운 삼각형으로 표시한다.
                         markerName = reply || asyncCall ? 'open' : 'filled';
                     } else if (edge instanceof RelationEdge) {
                         switch (edge.relationType) {
@@ -166,6 +166,8 @@ export function CanvasRenderer({ diagram, layout }: Props) {
                     const targetLabel = multiplicityPosition(points[points.length - 1], points[points.length - 2]);
                     return (
                         <g key={edge.id} data-edge-id={edge.id}>
+                            {/* 클릭 영역만 넓힌다. 이미지에는 실제 검은 선만 남긴다. */}
+                            <polyline data-export-exclude="true" points={toPoints(points)} fill="none" stroke="transparent" strokeWidth="14" pointerEvents="stroke" />
                             <polyline points={toPoints(points)} fill="none" stroke="black" strokeDasharray={dashed ? '6 4' : undefined} markerEnd={markerName ? marker(markerName) : undefined} />
                             {edge.label && <text x={labelX} y={labelY} textAnchor="middle" fill="black" stroke="white" strokeWidth="3" paintOrder="stroke">{edge.label}</text>}
                             {!isSequence && edge instanceof RelationEdge && <>
