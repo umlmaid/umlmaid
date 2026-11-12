@@ -48,6 +48,7 @@ export class MessageEdge extends AbstractEdge {
     readonly order: number,
     readonly isReply: boolean = false,
     label = '',
+    readonly isAsync: boolean = false,
   ) {
     super(id, sourceId, targetId, label);
   }

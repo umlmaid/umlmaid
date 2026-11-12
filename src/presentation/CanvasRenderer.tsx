@@ -148,9 +148,10 @@ export function CanvasRenderer({ diagram, layout }: Props) {
                     let dashed = false;
                     if (isSequence) {
                         const reply = edge instanceof MessageEdge && edge.isReply;
+                        const asyncCall = edge instanceof MessageEdge && edge.isAsync;
                         dashed = reply;
                         // 현 MessageEdge에는 비동기 구분이 없으므로 일반 호출은 동기로 표시한다.
-                        markerName = reply ? 'open' : 'filled';
+                        markerName = reply || asyncCall ? 'open' : 'filled';
                     } else if (edge instanceof RelationEdge) {
                         switch (edge.relationType) {
                             case RelationType.INHERITANCE: markerName = 'triangle'; break;
