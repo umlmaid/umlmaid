@@ -6,6 +6,7 @@
 // - 참여자 order = 처음 등장한 순서(선언이든 메시지든), 0부터
 // - 메시지 id = `msg-${order}`, order는 위에서부터 0, 1, 2...
 // - 점선 화살표(-->, -->>, --x, --))는 응답(isReply = true)
+// - 열린 화살촉(-), --))은 비동기(isAsync = true)
 // - 이 도구가 그리지 않는 문법(Note, loop/alt 등 블록, activate, autonumber 등)은 오류 없이 넘어간다.
 //   블록 안의 메시지는 그대로 읽는다.
 import { AbstractDiagram } from '../../domain/model/diagram';
@@ -72,7 +73,8 @@ export function parseSequenceDiagram(lines: SourceLine[]): ParseResult {
       ensureParticipant(to);
       const order = messages.length;
       const isReply = arrow.startsWith('--') || arrow === '<<-->>';
-      messages.push(new MessageEdge(`msg-${order}`, from, to, order, isReply, label.trim()));
+      const isAsync = arrow === '-)' || arrow === '--)';
+      messages.push(new MessageEdge(`msg-${order}`, from, to, order, isReply, label.trim(), isAsync));
       continue;
     }
 
