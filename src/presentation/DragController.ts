@@ -6,6 +6,7 @@
 // 노드는 포인터 위치가 아니라 잡은 지점을 보정한 노드 왼쪽 위 좌표를 넘긴다.
 // 이미 100% 기준 좌표로 변환했다면 zoom=1로 넘겨 중복 변환을 피한다.
 // zoom은 1=100%, 2=200%, 0.5=50%인 유한한 양수다. 잘못된 값은 RangeError다.
+// 넘기는 좌표는 0.1px 단위로 반올림한다. 화면 좌표 변환에서 생기는 286.9999959 같은 오차가 저장 파일에 남지 않게 한다.
 // 공개 void 시그니처를 유지하며, Workspace의 비동기 실패는 작업·ID·원본 오류를 콘솔에 보고한다.
 import type { Workspace } from '../application/Workspace';
 import type { Point } from '../domain/metadata/geometry';
@@ -16,7 +17,7 @@ export class DragController {
   /** 노드 드래그가 끝났을 때. 옮긴 노드는 고정(pinned)된다. */
   onNodeDragEnd(nodeId: string, screen: Point, zoom: number): void {
     assertValidZoom(zoom);
-    void this.workspace.moveNode(nodeId, screen.x / zoom, screen.y / zoom).catch((error: unknown) => {
+    void this.workspace.moveNode(nodeId, toCanvasUnit(screen.x, zoom), toCanvasUnit(screen.y, zoom)).catch((error: unknown) => {
       console.error('DragController.moveNode failed', nodeId, error);
     });
   }
@@ -24,7 +25,7 @@ export class DragController {
   /** 간선 꺾임점을 손으로 고쳤을 때. 이 경로는 수동(isManual)으로 보존된다. */
   onEdgeWaypointsChanged(edgeId: string, screenPoints: Point[], zoom: number): void {
     assertValidZoom(zoom);
-    const waypoints = screenPoints.map((point) => ({ x: point.x / zoom, y: point.y / zoom }));
+    const waypoints = screenPoints.map((point) => ({ x: toCanvasUnit(point.x, zoom), y: toCanvasUnit(point.y, zoom) }));
     void this.workspace.updateEdgeRoute(edgeId, waypoints).catch((error: unknown) => {
       console.error('DragController.updateEdgeRoute failed', edgeId, error);
     });
@@ -36,6 +37,11 @@ export class DragController {
       console.error('DragController.unpinNode failed', nodeId, error);
     });
   }
+}
+
+/** 화면 좌표를 100% 기준 픽셀로 바꾸고 0.1px 단위로 반올림한다. -0은 0으로 둔다. */
+function toCanvasUnit(value: number, zoom: number): number {
+  return Math.round((value / zoom) * 10) / 10 + 0;
 }
 
 function assertValidZoom(zoom: number): void {
