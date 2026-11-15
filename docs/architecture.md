@@ -88,8 +88,9 @@
 - `mergeMetadata()`가 이 도구의 핵심 기능이다. 다시 파싱해도 기존 노드의 좌표·고정 정보를 유지하고, 삭제된 노드의 정보는 정리한다.
 
 **Observer: DiagramView**
-- SyncManager는 `views: List<DiagramView>`에 등록된 화면들에 `onDiagramUpdated()`와 `onSyntaxError()`를 알린다.
+- SyncManager는 `views: List<DiagramView>`에 등록된 화면들에 `onDiagramUpdated()`와 `onParseError()`를 알린다.
 - CanvasRenderer는 그림을 다시 그리고, TextEditor는 오류 줄을 표시한다.
+- 파일 열기나 실행취소로 코드가 통째로 바뀌면 `onTextRestored()`로 편집기 글자를 바꾼다.
 - 나중에 화면이 추가돼도(예: 미리보기 창) SyncManager는 고치지 않는다.
 
 **Strategy + Factory: LayoutEngine, LayoutEngineFactory**
