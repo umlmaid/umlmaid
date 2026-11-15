@@ -30,6 +30,18 @@ describe('노드 드래그 입력', () => {
     expect(screen).toEqual({ x: 120, y: -60 });
     expect(result).toBeUndefined();
   });
+
+  it('좌표는 0.1px 단위로 반올림해 저장 파일에 긴 소수가 남지 않는다', () => {
+    const { controller, calls } = setup();
+    controller.onNodeDragEnd('node-A', { x: 286.9999959021807, y: 200.9111111111111 }, 1);
+    controller.onNodeDragEnd('node-B', { x: 100, y: 50 }, 3);
+    controller.onNodeDragEnd('node-C', { x: -0.01, y: 0 }, 1);
+
+    expect(calls.moveNode).toHaveBeenNthCalledWith(1, 'node-A', 287, 200.9);
+    expect(calls.moveNode).toHaveBeenNthCalledWith(2, 'node-B', 33.3, 16.7);
+    expect(calls.moveNode).toHaveBeenNthCalledWith(3, 'node-C', 0, 0);
+    expect(Object.is(calls.moveNode.mock.calls[2][1], -0)).toBe(false);
+  });
 });
 
 describe('간선 경유점 입력', () => {
@@ -53,6 +65,12 @@ describe('간선 경유점 입력', () => {
     expect(calls.moveNode).not.toHaveBeenCalled();
     expect(calls.unpinNode).not.toHaveBeenCalled();
     expect(result).toBeUndefined();
+  });
+
+  it('경유점도 0.1px 단위로 반올림한다', () => {
+    const { controller, calls } = setup();
+    controller.onEdgeWaypointsChanged('edge-A', [{ x: 10, y: 20.04999 }], 3);
+    expect(calls.updateEdgeRoute).toHaveBeenCalledExactlyOnceWith('edge-A', [{ x: 3.3, y: 6.7 }]);
   });
 
   it('빈 경유점 배열도 전달한다', () => {
