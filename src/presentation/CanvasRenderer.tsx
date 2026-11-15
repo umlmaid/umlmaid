@@ -6,6 +6,7 @@ import type { AbstractDiagram } from '../domain/model/diagram';
 import { MessageEdge, RelationEdge } from '../domain/model/edges';
 import { ClassNode } from '../domain/model/nodes';
 import { DiagramType, RelationType } from '../domain/model/types';
+import { placeLabel, type TextBox } from './labelPlacement';
 
 export const MIN_FONT_SIZE = 12;
 const PADDING = 20;
@@ -61,18 +62,19 @@ export function classRoute(source: NodePosition, target: NodePosition, bends: Po
     return trimStart([...fromBoundary].reverse(), target).reverse();
 }
 
-/** 꺾은선의 실제 길이를 기준으로 라벨 위치를 잡는다. */
-function halfway(points: Point[]): Point {
+/** 꺾은선의 실제 길이를 기준으로 라벨 위치를 잡는다. 그 지점의 선 방향도 함께 돌려준다. */
+function halfway(points: Point[]): { point: Point; direction: Point } {
     const lengths = points.slice(1).map((p, i) => Math.hypot(p.x - points[i].x, p.y - points[i].y));
     let remaining = lengths.reduce((sum, n) => sum + n, 0) / 2;
     for (let i = 0; i < lengths.length; i += 1) {
         if (remaining <= lengths[i] && lengths[i] > 0) {
             const t = remaining / lengths[i];
-            return { x: points[i].x + (points[i + 1].x - points[i].x) * t, y: points[i].y + (points[i + 1].y - points[i].y) * t };
+            const direction = { x: points[i + 1].x - points[i].x, y: points[i + 1].y - points[i].y };
+            return { point: { x: points[i].x + direction.x * t, y: points[i].y + direction.y * t }, direction };
         }
         remaining -= lengths[i];
     }
-    return points[0];
+    return { point: points[0], direction: { x: 0, y: 0 } };
 }
 
 function multiplicityPosition(end: Point, neighbour: Point): Point {
@@ -102,10 +104,18 @@ export function CanvasRenderer({ diagram, layout }: Props) {
             ? bends.filter((p, i) => i === 0 || !samePoint(p, bends[i - 1]))
             : classRoute(source, target, bends, edge.sourceId === edge.targetId);
         if (points.length < 2) return [];
-        const labelPoint = halfway(isSequence && edge.sourceId === edge.targetId ? points.slice(0, 2) : points);
-        // 긴 메시지 이름도 글자를 줄이지 않고 캔버스 폭에 포함한다.
-        const labelX = Math.max(textWidth(edge.label) / 2, labelPoint.x);
-        return [{ edge, points, labelX, labelY: labelPoint.y - 6 }];
+        const middle = halfway(isSequence && edge.sourceId === edge.targetId ? points.slice(0, 2) : points);
+        // 다중성 글자와 겹치면 레이블만 선 옆으로 비킨다(글자 크기는 줄이지 않는다).
+        const multiplicities: TextBox[] = [];
+        if (!isSequence && edge instanceof RelationEdge) {
+            const s = multiplicityPosition(points[0], points[1]);
+            const t = multiplicityPosition(points[points.length - 1], points[points.length - 2]);
+            if (edge.sourceMultiplicity) multiplicities.push({ ...s, width: textWidth(edge.sourceMultiplicity) });
+            if (edge.targetMultiplicity) multiplicities.push({ ...t, width: textWidth(edge.targetMultiplicity) });
+        }
+        // 긴 메시지 이름도 글자를 줄이지 않고 캔버스 폭에 포함한다(placeLabel이 왼쪽 끝을 0 이상으로 둔다).
+        const label = placeLabel(middle.point, middle.direction, textWidth(edge.label), edge.label ? multiplicities : []);
+        return [{ edge, points, labelX: label.x, labelY: label.y }];
     });
     const routePoints = edges.flatMap(({ points }) => points);
     const bottom = Math.max(0, ...positions.map((p) => p.y + p.height), ...routePoints.map((p) => p.y));
