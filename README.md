@@ -8,6 +8,8 @@ UMLet과 Mermaid의 장점을 합친 UML 다이어그램 도구입니다. 소프
 
 지원 범위: 클래스 다이어그램, 시퀀스 다이어그램
 
+**바로 써 보기:** https://umlmaid.github.io/umlmaid/ (설치 없이 브라우저에서 실행, main에 머지될 때마다 자동 갱신)
+
 ## 기술 스택
 
 TypeScript · React · Vite · elkjs(자동 배치) · Vitest
@@ -33,5 +35,5 @@ TypeScript · React · Vite · elkjs(자동 배치) · Vitest
 - [x] 아키텍처·디자인 패턴 설계
 - [x] 기술 스택 결정
 - [x] 공통 타입·폴더 뼈대
-- [ ] 모듈 담당 배정 (M1~M6)
-- [ ] 개발
+- [x] 모듈 담당 배정 (M1~M6)
+- [x] 개발
