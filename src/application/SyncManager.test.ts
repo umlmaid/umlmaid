@@ -77,6 +77,25 @@ describe('마우스 변경', () => {
     expect(lastLayout().edgeRoutes.get('A-->B')).toEqual({ waypoints: [{ x: 50, y: 200 }], isManual: true });
   });
 
+  it('선을 꺾으면 양 끝 노드도 지금 자리에 고정된다 (인터뷰 Q8)', async () => {
+    const { sync, lastLayout } = setup();
+    await sync.onTextChanged('class A\nclass B\nA --> B');
+    await sync.onCanvasEdgeRouteChanged('A-->B', [{ x: 100, y: 200 }]);
+    // 앞에 클래스가 끼어들어 자동 배치라면 A, B가 오른쪽으로 밀리는 상황
+    await sync.onTextChanged('class C\nclass A\nclass B\nA --> B');
+    expect(lastLayout().nodePositions.get('A')).toMatchObject({ x: 0, y: 0, isPinned: true });
+    expect(lastLayout().nodePositions.get('B')).toMatchObject({ x: 200, y: 0, isPinned: true });
+    expect(lastLayout().edgeRoutes.get('A-->B')).toEqual({ waypoints: [{ x: 100, y: 200 }], isManual: true });
+  });
+
+  it('이미 고정된 끝 노드는 고정 좌표를 그대로 둔다', async () => {
+    const { sync, lastLayout } = setup();
+    await sync.onTextChanged('class A\nclass B\nA --> B');
+    await sync.onCanvasNodeMoved('A', 500, 300);
+    await sync.onCanvasEdgeRouteChanged('A-->B', [{ x: 100, y: 200 }]);
+    expect(lastLayout().nodePositions.get('A')).toMatchObject({ x: 500, y: 300, isPinned: true });
+  });
+
   it('고정을 풀면 자동 배치 위치로 돌아간다 (FR-04-4)', async () => {
     const { sync, lastLayout } = setup();
     await sync.onTextChanged('class A');

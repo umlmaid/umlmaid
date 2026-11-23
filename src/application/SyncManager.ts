@@ -87,10 +87,21 @@ export class SyncManager {
     return this.relayout();
   }
 
-  /** 간선 꺾임점을 손으로 고쳤을 때. 이후 재배치에서도 유지된다(FR-04-7). */
+  /**
+   * 간선 꺾임점을 손으로 고쳤을 때. 이후 재배치에서도 유지된다(FR-04-7).
+   * 꺾임점은 캔버스 좌표라 양 끝 노드가 재배치로 움직이면 선 모양이 일그러진다.
+   * 그래서 양 끝 노드도 지금 자리에 고정한다. 손댄 것은 자동 배치가 건드리지 않는다(인터뷰 Q3, Q8).
+   */
   async onCanvasEdgeRouteChanged(edgeId: string, waypoints: Point[]): Promise<boolean> {
-    if (!this.currentDiagram?.edges.some((e) => e.id === edgeId)) return false;
+    const edge = this.currentDiagram?.edges.find((e) => e.id === edgeId);
+    if (!edge) return false;
     this.currentMetadata.setEdgeRoute(edgeId, { waypoints, isManual: true });
+    for (const nodeId of [edge.sourceId, edge.targetId]) {
+      const pos = this.lastLayout?.nodePositions.get(nodeId);
+      if (pos && !this.currentMetadata.getPosition(nodeId)?.isPinned) {
+        this.currentMetadata.setPosition(nodeId, { ...pos, isPinned: true });
+      }
+    }
     return this.relayout();
   }
 
