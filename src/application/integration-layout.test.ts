@@ -43,6 +43,18 @@ describe('M1 파서 + M2 레이아웃 + M3 좌표 + M4 흐름', () => {
     for (const id of ['Animal', 'Cat', 'Cow']) expect(after.get(id)).toEqual(before.get(id));
   });
 
+  it('선을 꺾은 뒤 클래스를 추가해도 양 끝 노드와 꺾임점이 그대로다 (인터뷰 Q8, FR-04-7)', async () => {
+    const { sync, lastLayout } = setup();
+    await sync.onTextChanged(ANIMALS);
+    const before = lastLayout().nodePositions;
+    await sync.onCanvasEdgeRouteChanged('Cat-INHERITANCE-Animal', [{ x: 400, y: 150 }]);
+    await sync.onTextChanged(`${ANIMALS}\n  class Bird`);
+    await sync.onTextChanged(`${ANIMALS}\n  class Bird\n  Animal <|-- Bird`);
+    const after = lastLayout();
+    for (const id of ['Animal', 'Cat']) expect(after.nodePositions.get(id)).toMatchObject({ x: before.get(id)!.x, y: before.get(id)!.y });
+    expect(after.edgeRoutes.get('Cat-INHERITANCE-Animal')?.waypoints).toEqual([{ x: 400, y: 150 }]);
+  });
+
   it('AC-3: 3개를 옮기고 3개를 추가하면 옮긴 3개는 0px 그대로, 새 노드는 겹치지 않는다', async () => {
     const { sync, lastLayout } = setup();
     await sync.onTextChanged(ANIMALS);
