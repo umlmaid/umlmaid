@@ -12,11 +12,42 @@ function setup() {
   const view = { onDiagramUpdated: vi.fn(), onParseError: vi.fn(), onTextRestored: vi.fn() } satisfies DiagramView;
   sync.addView(view);
   const lastLayout = (): LayoutResult => view.onDiagramUpdated.mock.lastCall![1];
-  return { sync, lastLayout };
+  const lastDiagram = () => view.onDiagramUpdated.mock.lastCall![0];
+  return { sync, lastLayout, lastDiagram };
 }
 
 const overlaps = (a: NodePosition, b: NodePosition) =>
   a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+
+/** 선(노드 가운데 → 꺾임점 → 노드 가운데)이 양 끝이 아닌 다른 상자를 지나가는지 */
+function edgesThroughBoxes(diagram: { edges: { id: string; sourceId: string; targetId: string }[] }, layout: LayoutResult): string[] {
+  const center = (p: NodePosition) => ({ x: p.x + p.width / 2, y: p.y + p.height / 2 });
+  const hits: string[] = [];
+  for (const e of diagram.edges) {
+    const s = layout.nodePositions.get(e.sourceId)!;
+    const t = layout.nodePositions.get(e.targetId)!;
+    const pts = [center(s), ...(layout.edgeRoutes.get(e.id)?.waypoints ?? []), center(t)];
+    for (const [id, box] of layout.nodePositions) {
+      if (id === e.sourceId || id === e.targetId) continue;
+      for (let i = 0; i < pts.length - 1; i++) {
+        // 선분을 잘게 나눠 상자 안에 들어가는 점이 있는지 본다
+        for (let k = 0; k <= 50; k++) {
+          const x = pts[i].x + ((pts[i + 1].x - pts[i].x) * k) / 50;
+          const y = pts[i].y + ((pts[i + 1].y - pts[i].y) * k) / 50;
+          if (x > box.x && x < box.x + box.width && y > box.y && y < box.y + box.height) {
+            hits.push(`${e.id} → ${id}`);
+            k = 51;
+            i = pts.length;
+          }
+        }
+      }
+    }
+  }
+  return hits;
+}
+
+/** Animal 상자 위치 */
+const before0 = (l: LayoutResult) => l.nodePositions.get('Animal')!;
 
 const ANIMALS = 'classDiagram\n  Animal <|-- Dog\n  Animal <|-- Cat\n  Animal <|-- Cow';
 
@@ -53,6 +84,17 @@ describe('M1 파서 + M2 레이아웃 + M3 좌표 + M4 흐름', () => {
     const after = lastLayout();
     for (const id of ['Animal', 'Cat']) expect(after.nodePositions.get(id)).toMatchObject({ x: before.get(id)!.x, y: before.get(id)!.y });
     expect(after.edgeRoutes.get('Cat-INHERITANCE-Animal')?.waypoints).toEqual([{ x: 400, y: 150 }]);
+  });
+
+  it('고정 노드가 생겨도 선이 다른 상자를 지나가지 않는다 (인터뷰 Q8, 추가 요구: 간선 꼬임)', async () => {
+    const { sync, lastLayout, lastDiagram } = setup();
+    await sync.onTextChanged(ANIMALS);
+    await sync.onCanvasEdgeRouteChanged('Cat-INHERITANCE-Animal', [{ x: 400, y: 150 }]);
+    await sync.onTextChanged(`${ANIMALS}\n  class Bird\n  Animal <|-- Bird`);
+    expect(edgesThroughBoxes(lastDiagram(), lastLayout())).toEqual([]);
+    // 노드를 다른 노드들 사이로 끌어다 놓은 경우도
+    await sync.onCanvasNodeMoved('Bird', before0(lastLayout()).x, before0(lastLayout()).y + 150);
+    expect(edgesThroughBoxes(lastDiagram(), lastLayout())).toEqual([]);
   });
 
   it('AC-3: 3개를 옮기고 3개를 추가하면 옮긴 3개는 0px 그대로, 새 노드는 겹치지 않는다', async () => {
