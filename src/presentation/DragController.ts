@@ -1,5 +1,5 @@
 // 담당: M3 좌표 메타데이터
-// 캔버스의 마우스 입력(노드 드래그, 간선 꺾임점 수정, 고정 해제)을 받아 Workspace로 넘긴다.
+// 캔버스의 마우스 입력(노드 드래그, 크기 조절, 간선 꺾임점 수정, 고정 해제)을 받아 Workspace로 넘긴다.
 // 데이터를 직접 바꾸지 않는다. 화면 좌표는 줌 배율로 나눠 100% 기준 픽셀로 바꾼 뒤 넘긴다.
 // screen/screenPoints는 줌이 적용된 캔버스 콘텐츠 원점 기준 CSS 픽셀이다.
 // 호출부에서 브라우저 위치·스크롤·팬·여백을 보정한다. clientX/clientY를 그대로 넘기지 않는다.
@@ -20,6 +20,22 @@ export class DragController {
     void this.workspace.moveNode(nodeId, toCanvasUnit(screen.x, zoom), toCanvasUnit(screen.y, zoom)).catch((error: unknown) => {
       console.error('DragController.moveNode failed', nodeId, error);
     });
+  }
+
+  /** 모서리 크기 조절이 끝났을 때. 좌표·크기를 100% 기준으로 바꿔 넘기고, 노드는 고정된다. */
+  onNodeResizeEnd(nodeId: string, screen: Point, screenSize: { width: number; height: number }, zoom: number): void {
+    assertValidZoom(zoom);
+    void this.workspace
+      .resizeNode(
+        nodeId,
+        toCanvasUnit(screen.x, zoom),
+        toCanvasUnit(screen.y, zoom),
+        toCanvasUnit(screenSize.width, zoom),
+        toCanvasUnit(screenSize.height, zoom),
+      )
+      .catch((error: unknown) => {
+        console.error('DragController.resizeNode failed', nodeId, error);
+      });
   }
 
   /** 간선 꺾임점을 손으로 고쳤을 때. 이 경로는 수동(isManual)으로 보존된다. */

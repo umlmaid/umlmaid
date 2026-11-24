@@ -12,7 +12,7 @@ import { MessageEdge } from '../model/edges';
 import { ParticipantNode } from '../model/nodes';
 import type { LayoutEngine } from './LayoutEngine';
 import type { LayoutResult } from './LayoutResult';
-import { measureNode } from './nodeSize';
+import { measurePlacedNode } from './nodeSize';
 
 const MARGIN_X = 40;
 const BOX_TOP = 40;
@@ -35,9 +35,9 @@ export class SequenceLayoutEngine implements LayoutEngine {
     let cursorX = MARGIN_X;
     let tallest = 0;
     for (const { node } of ordered) {
-      const size = measureNode(node);
       const saved = metadata.getPosition(node.id);
-      // 고정 노드는 x, y를 그대로 두고, 크기만 현재 내용에 맞춘다.
+      const size = measurePlacedNode(node, saved);
+      // 고정 노드는 위치와 사용자 크기를 유지한다. 내용이 늘면 최소 크기를 확보한다.
       nodePositions.set(
         node.id,
         saved?.isPinned

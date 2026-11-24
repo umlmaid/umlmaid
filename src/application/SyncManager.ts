@@ -14,6 +14,8 @@ import { DiagramType } from '../domain/model/types';
 import { MermaidParser } from '../infrastructure/parser/MermaidParser';
 import { isSuccess } from '../infrastructure/parser/ParseResult';
 import { toSourceLines } from '../infrastructure/parser/lines';
+import { changeNodeLabel } from '../infrastructure/parser/NodeLabelEditor';
+import { measureNode } from '../domain/layout/nodeSize';
 import type { DiagramView } from './DiagramView';
 import type { Snapshot } from './Snapshot';
 
@@ -85,6 +87,25 @@ export class SyncManager {
     if (!this.currentDiagram?.getNode(nodeId) || !size) return false;
     this.currentMetadata.setPosition(nodeId, { x, y, width: size.width, height: size.height, isPinned: true });
     return this.relayout();
+  }
+
+  /** 크기 조정은 코드 대신 좌표·크기만 기록하고 노드를 고정한다. */
+  async onCanvasNodeResized(nodeId: string, x: number, y: number, width: number, height: number): Promise<boolean> {
+    const node = this.currentDiagram?.getNode(nodeId);
+    if (!node || !this.lastLayout?.nodePositions.has(nodeId)) return false;
+    if (![x, y, width, height].every(Number.isFinite) || x < 0 || y < 0 || width <= 0 || height <= 0) throw new RangeError('노드 위치와 크기가 올바르지 않습니다.');
+    const minimum = measureNode(node);
+    this.currentMetadata.setPosition(nodeId, { x, y, width: Math.max(minimum.width, width), height: Math.max(minimum.height, height), isPinned: true });
+    return this.relayout();
+  }
+
+  /** FR-02-4 예외: 명시적으로 확정한 표시 이름만 표준 별칭으로 코드에 반영한다. */
+  async renameNode(nodeId: string, label: string): Promise<boolean> {
+    const next = changeNodeLabel(this.currentText, nodeId, label);
+    if (next === this.currentText) return false;
+    const applied = await this.onTextChanged(next);
+    if (applied) for (const view of this.views) view.onTextRestored(next);
+    return applied;
   }
 
   /**

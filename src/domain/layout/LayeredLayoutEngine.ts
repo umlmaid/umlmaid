@@ -9,7 +9,7 @@ import { type AbstractEdge, RelationEdge } from '../model/edges';
 import { RelationType } from '../model/types';
 import type { LayoutEngine } from './LayoutEngine';
 import type { LayoutResult } from './LayoutResult';
-import { measureNode } from './nodeSize';
+import { measurePlacedNode } from './nodeSize';
 
 const elk = new ELK(); // 인스턴스는 하나만 만들어 재사용한다
 const GAP = 20; // 노드 사이 최소 간격(px)
@@ -41,7 +41,7 @@ const isReversed = (e: AbstractEdge): boolean => e instanceof RelationEdge && TA
 
 export class LayeredLayoutEngine implements LayoutEngine {
   async applyLayout(diagram: AbstractDiagram, metadata: LayoutMetadata): Promise<LayoutResult> {
-    const sizes = new Map(diagram.nodes.map((n) => [n.id, measureNode(n)]));
+    const sizes = new Map(diagram.nodes.map((n) => [n.id, measurePlacedNode(n, metadata.getPosition(n.id))]));
     // 없는 노드를 가리키는 간선은 ELK가 에러를 내므로 뺀다
     const edges = diagram.edges.filter((e) => sizes.has(e.sourceId) && sizes.has(e.targetId));
 

@@ -2,6 +2,7 @@
 // 노드 크기 추정. 엔진은 화면(M5)을 모르므로 글자 수로 크기를 어림잡는다.
 // 상수를 바꾸면 CanvasRenderer가 그리는 크기와 어긋날 수 있으니 M5 담당과 맞춘다.
 import { AbstractNode, ClassNode, ParticipantNode } from '../model/nodes';
+import type { NodePosition } from '../metadata/geometry';
 
 export interface Size {
   width: number;
@@ -15,6 +16,14 @@ const PAD_Y = 8;
 const CLASS_MIN_W = 120;
 const PARTICIPANT_MIN_W = 100;
 const PARTICIPANT_H = 40;
+
+/** 고정된 사용자 크기를 유지하되 글씨가 잘리는 크기까지 줄이지 않는다. */
+export function measurePlacedNode(node: AbstractNode, saved?: NodePosition): Size {
+  const minimum = measureNode(node);
+  return saved?.isPinned
+    ? { width: Math.max(minimum.width, saved.width), height: Math.max(minimum.height, saved.height) }
+    : minimum;
+}
 
 /** 한글 같은 전각 글자는 반각의 2배로 센다 */
 function textWidth(text: string): number {

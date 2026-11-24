@@ -43,6 +43,16 @@ export class Workspace {
     if (await this.syncManager.onCanvasEdgeRouteChanged(edgeId, waypoints)) this.captureSnapshot();
   }
 
+  async resizeNode(nodeId: string, x: number, y: number, width: number, height: number): Promise<void> {
+    this.flushPendingCodeSnapshot();
+    if (await this.syncManager.onCanvasNodeResized(nodeId, x, y, width, height)) this.captureSnapshot();
+  }
+
+  async renameNode(nodeId: string, label: string): Promise<void> {
+    this.flushPendingCodeSnapshot();
+    if (await this.syncManager.renameNode(nodeId, label)) this.captureSnapshot();
+  }
+
   async unpinNode(nodeId: string): Promise<void> {
     this.flushPendingCodeSnapshot();
     if (await this.syncManager.unpinNode(nodeId)) this.captureSnapshot();
