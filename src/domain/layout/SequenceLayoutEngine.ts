@@ -23,62 +23,62 @@ const SELF_LOOP_W = 40;
 const SELF_LOOP_H = 20;
 
 export class SequenceLayoutEngine implements LayoutEngine {
-    async applyLayout(diagram: AbstractDiagram, metadata: LayoutMetadata): Promise<LayoutResult> {
-        const nodePositions = new Map<string, NodePosition>();
-        const edgeRoutes = new Map<string, EdgeRoute>();
+  async applyLayout(diagram: AbstractDiagram, metadata: LayoutMetadata): Promise<LayoutResult> {
+    const nodePositions = new Map<string, NodePosition>();
+    const edgeRoutes = new Map<string, EdgeRoute>();
 
-        // 참여자: order 순서대로 왼쪽부터. 참여자가 아닌 노드는 뒤로 보낸다.
-        const ordered = diagram.nodes
-            .map((node, index) => ({ node, key: node instanceof ParticipantNode ? node.order : Number.MAX_SAFE_INTEGER, index }))
-            .sort((a, b) => a.key - b.key || a.index - b.index);
+    // 참여자: order 순서대로 왼쪽부터. 참여자가 아닌 노드는 뒤로 보낸다.
+    const ordered = diagram.nodes
+      .map((node, index) => ({ node, key: node instanceof ParticipantNode ? node.order : Number.MAX_SAFE_INTEGER, index }))
+      .sort((a, b) => a.key - b.key || a.index - b.index);
 
-        let cursorX = MARGIN_X;
-        let tallest = 0;
-        for (const { node } of ordered) {
-            const saved = metadata.getPosition(node.id);
-            const size = measurePlacedNode(node, saved);
-            // 고정 노드는 위치와 사용자 크기를 유지한다. 내용이 늘면 최소 크기를 확보한다.
-            nodePositions.set(
-                node.id,
-                saved?.isPinned
-                    ? { x: saved.x, y: saved.y, ...size, isPinned: true }
-                    : { x: cursorX, y: BOX_TOP, ...size, isPinned: false },
-            );
-            cursorX += size.width + PARTICIPANT_GAP; // 고정 여부와 상관없이 자리는 차지한다
-            tallest = Math.max(tallest, size.height);
-        }
-
-        // 메시지: order가 클수록 아래. 기본 경로는 [출발 생명선, 도착 생명선]을 같은 y로 잇는 선이다.
-        const firstY = BOX_TOP + tallest + FIRST_MESSAGE_OFFSET;
-        for (const edge of diagram.edges) {
-            const manual = metadata.getEdgeRoute(edge.id);
-            if (manual?.isManual) {
-                edgeRoutes.set(edge.id, manual);
-                continue;
-            }
-            if (!(edge instanceof MessageEdge)) continue;
-            const from = nodePositions.get(edge.sourceId);
-            const to = nodePositions.get(edge.targetId);
-            if (!from || !to) continue;
-
-            const y = firstY + edge.order * MESSAGE_STEP;
-            const fromX = from.x + from.width / 2;
-            const toX = to.x + to.width / 2;
-            const waypoints =
-                edge.sourceId === edge.targetId
-                    ? [
-                        { x: fromX, y },
-                        { x: fromX + SELF_LOOP_W, y },
-                        { x: fromX + SELF_LOOP_W, y: y + SELF_LOOP_H },
-                        { x: fromX, y: y + SELF_LOOP_H },
-                    ]
-                    : [
-                        { x: fromX, y },
-                        { x: toX, y },
-                    ];
-            edgeRoutes.set(edge.id, { waypoints, isManual: false });
-        }
-
-        return { nodePositions, edgeRoutes };
+    let cursorX = MARGIN_X;
+    let tallest = 0;
+    for (const { node } of ordered) {
+      const saved = metadata.getPosition(node.id);
+      const size = measurePlacedNode(node, saved);
+      // 고정 노드는 위치와 사용자 크기를 유지한다. 내용이 늘면 최소 크기를 확보한다.
+      nodePositions.set(
+        node.id,
+        saved?.isPinned
+          ? { x: saved.x, y: saved.y, ...size, isPinned: true }
+          : { x: cursorX, y: BOX_TOP, ...size, isPinned: false },
+      );
+      cursorX += size.width + PARTICIPANT_GAP; // 고정 여부와 상관없이 자리는 차지한다
+      tallest = Math.max(tallest, size.height);
     }
+
+    // 메시지: order가 클수록 아래. 기본 경로는 [출발 생명선, 도착 생명선]을 같은 y로 잇는 선이다.
+    const firstY = BOX_TOP + tallest + FIRST_MESSAGE_OFFSET;
+    for (const edge of diagram.edges) {
+      const manual = metadata.getEdgeRoute(edge.id);
+      if (manual?.isManual) {
+        edgeRoutes.set(edge.id, manual);
+        continue;
+      }
+      if (!(edge instanceof MessageEdge)) continue;
+      const from = nodePositions.get(edge.sourceId);
+      const to = nodePositions.get(edge.targetId);
+      if (!from || !to) continue;
+
+      const y = firstY + edge.order * MESSAGE_STEP;
+      const fromX = from.x + from.width / 2;
+      const toX = to.x + to.width / 2;
+      const waypoints =
+        edge.sourceId === edge.targetId
+          ? [
+              { x: fromX, y },
+              { x: fromX + SELF_LOOP_W, y },
+              { x: fromX + SELF_LOOP_W, y: y + SELF_LOOP_H },
+              { x: fromX, y: y + SELF_LOOP_H },
+            ]
+          : [
+              { x: fromX, y },
+              { x: toX, y },
+            ];
+      edgeRoutes.set(edge.id, { waypoints, isManual: false });
+    }
+
+    return { nodePositions, edgeRoutes };
+  }
 }
