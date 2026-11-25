@@ -58,6 +58,17 @@ describe('마우스 변경', () => {
     expect(lastLayout().nodePositions.get('A')).toMatchObject({ x: 500, y: 300 });
   });
 
+  it('노드를 추가해도 손대지 않은 기존 노드는 그 자리에 있다 (인터뷰: 기존 객체의 배치가 바뀌면 안됨)', async () => {
+    const { sync, lastLayout } = setup();
+    await sync.onTextChanged('class A\nclass B');
+    // 가짜 엔진은 코드 순서대로 놓으므로, 앞에 끼어든 C 때문에 A, B가 밀리는 상황
+    await sync.onTextChanged('class C\nclass A\nclass B');
+    expect(lastLayout().nodePositions.get('A')).toMatchObject({ x: 0, y: 0, isPinned: false });
+    expect(lastLayout().nodePositions.get('B')).toMatchObject({ x: 200, y: 0, isPinned: false });
+    // 저장해 두므로 파일을 다시 열어도 같은 자리다
+    expect(sync.metadata.getPosition('B')).toMatchObject({ x: 200, y: 0, isPinned: false });
+  });
+
   it('노드를 추가해도 고정된 노드는 그 자리에 있다 (FR-04-3, 회의 09-23 시나리오)', async () => {
     const { sync, lastLayout } = setup();
     await sync.onTextChanged('class A\nclass B');
@@ -106,8 +117,8 @@ describe('마우스 변경', () => {
 
   it('전체 고정 해제: 고정된 노드를 모두 자동 배치로 되돌린다 (FR-04-4)', async () => {
     const { sync, lastLayout } = setup();
-    await sync.onTextChanged('class A\nclass B');
     expect(await sync.unpinAll()).toBe(false);
+    await sync.onTextChanged('class A\nclass B');
     await sync.onCanvasNodeMoved('A', 500, 300);
     await sync.onCanvasNodeMoved('B', 700, 300);
     expect(await sync.unpinAll()).toBe(true);

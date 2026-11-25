@@ -12,7 +12,10 @@ export interface NodePosition {
   y: number;
   width: number;
   height: number;
-  /** true면 자동 배치가 이 노드의 x, y를 절대 바꾸지 않는다 */
+  /**
+   * true면 사용자가 손으로 정한 자리다(핀 표시, 크기 유지).
+   * false여도 저장된 x, y는 자동 배치가 바꾸지 않는다. 한 번 놓인 노드는 새 노드가 생겨도 그대로다.
+   */
   isPinned: boolean;
 }
 

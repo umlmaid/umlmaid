@@ -3,8 +3,9 @@
 //   코드 변경: parse → mergeMetadata → 엔진 선택 → applyLayout → notifyViews
 //   마우스 변경: LayoutMetadata만 수정 → applyLayout → notifyViews (Mermaid 코드는 바꾸지 않는다)
 //
-// LayoutMetadata에는 사용자가 정한 것(고정 좌표, 수동 간선 경로)만 담는다.
-// 자동 배치로 나온 좌표는 lastLayout에만 두고 저장하지 않는다. 다시 배치하면 다시 나오기 때문이다.
+// LayoutMetadata에는 사용자가 정한 것(고정 좌표, 수동 간선 경로)과, 자동으로 한 번 놓인 노드의 자리를 담는다.
+// 자동으로 놓인 자리도 기억해야 새 노드가 생겨도 기존 노드가 움직이지 않고, 파일을 다시 열어도 같은 그림이 나온다.
+// (인터뷰: "기존 객체의 배치가 바뀌면 안됨", "로드시 UI가 유지되도록")
 import { LayoutEngineFactory } from '../domain/layout/LayoutEngineFactory';
 import type { LayoutResult } from '../domain/layout/LayoutResult';
 import type { Point } from '../domain/metadata/geometry';
@@ -126,18 +127,18 @@ export class SyncManager {
     return this.relayout();
   }
 
-  /** 고정을 풀어 자동 배치로 돌린다(FR-04-4). */
+  /** 고정을 풀어 자동 배치로 돌린다(FR-04-4). 기억한 자리를 지워야 자동 배치가 새로 놓는다. */
   async unpinNode(nodeId: string): Promise<boolean> {
-    if (!this.currentMetadata.getPosition(nodeId)) return false;
-    this.currentMetadata.setPinned(nodeId, false);
+    if (!this.currentMetadata.getPosition(nodeId)?.isPinned) return false;
+    this.currentMetadata.removePosition(nodeId);
     return this.relayout();
   }
 
-  /** 모든 노드의 고정을 풀어 자동 배치로 돌린다(FR-04-4). 고정된 노드가 없으면 false. */
+  /** 모든 노드의 자리를 잊고 처음부터 자동 배치한다(FR-04-4). 다시 놓을 노드가 없으면 false. */
   async unpinAll(): Promise<boolean> {
-    const pinned = (this.currentDiagram?.nodes ?? []).filter((n) => this.currentMetadata.getPosition(n.id)?.isPinned);
-    if (pinned.length === 0) return false;
-    for (const node of pinned) this.currentMetadata.setPinned(node.id, false);
+    const placed = (this.currentDiagram?.nodes ?? []).filter((n) => this.currentMetadata.getPosition(n.id));
+    if (placed.length === 0) return false;
+    for (const node of placed) this.currentMetadata.removePosition(node.id);
     return this.relayout();
   }
 
@@ -185,6 +186,10 @@ export class SyncManager {
     const engine = this.layoutEngineFactory.getEngine(diagram.type);
     const layout = await engine.applyLayout(diagram, this.currentMetadata);
     if (rev !== this.revision) return false;
+    // 처음 놓인 노드의 자리를 기억해 둔다. 다음 배치부터는 이 자리를 그대로 쓴다.
+    for (const [id, pos] of layout.nodePositions) {
+      if (!this.currentMetadata.getPosition(id)) this.currentMetadata.setPosition(id, { ...pos, isPinned: false });
+    }
     this.lastLayout = layout;
     this.notifyViews(diagram, layout);
     return true;

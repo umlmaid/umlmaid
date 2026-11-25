@@ -59,22 +59,35 @@ export class LayeredLayoutEngine implements LayoutEngine {
     const elkPos = new Map<string, Point>();
     for (const c of laidOut.children ?? []) elkPos.set(c.id.slice(NODE.length), { x: c.x ?? 0, y: c.y ?? 0 });
 
-    // 1) 고정 노드는 저장된 x, y 그대로
+    // 1) 이미 자리가 있는 노드는 저장된 x, y 그대로. 손으로 고정한 노드뿐 아니라 전에 자동으로 놓인 노드도 같다.
+    //    인터뷰: "새 객체가 추가될 때 적절한 위치로 자동 배치되지만 기존 객체의 배치가 바뀌면 안됨"
     const nodePositions = new Map<string, NodePosition>();
     const placed: NodePosition[] = [];
     for (const n of diagram.nodes) {
       const saved = metadata.getPosition(n.id);
-      if (!saved?.isPinned) continue;
-      const pos = { x: saved.x, y: saved.y, ...sizes.get(n.id)!, isPinned: true };
+      if (!saved) continue;
+      const pos = { x: saved.x, y: saved.y, ...sizes.get(n.id)!, isPinned: saved.isPinned };
       nodePositions.set(n.id, pos);
       placed.push(pos);
     }
-    // 2) 나머지는 ELK 결과. 고정 노드나 앞서 놓인 노드와 겹치면 아래로 민다
+    // 2) 새 노드는 ELK 결과. 이미 놓인 이웃이 있으면 ELK 안에서의 상대 위치를 그 이웃의 실제 자리에 맞춰 옮긴다.
+    //    앞서 놓인 노드와 겹치면 같은 줄 오른쪽으로 민다
+    const neighbors = new Map<string, string[]>();
+    for (const e of edges) {
+      neighbors.set(e.sourceId, [...(neighbors.get(e.sourceId) ?? []), e.targetId]);
+      neighbors.set(e.targetId, [...(neighbors.get(e.targetId) ?? []), e.sourceId]);
+    }
     for (const n of diagram.nodes) {
       if (nodePositions.has(n.id)) continue;
       const base = elkPos.get(n.id) ?? { x: 0, y: 0 };
-      const pos = { ...base, ...sizes.get(n.id)!, isPinned: false };
-      pushDownUntilFree(pos, placed);
+      const anchorId = neighbors.get(n.id)?.find((id) => nodePositions.has(id));
+      const at = anchorId
+        ? {
+            x: nodePositions.get(anchorId)!.x + base.x - elkPos.get(anchorId)!.x,
+            y: nodePositions.get(anchorId)!.y + base.y - elkPos.get(anchorId)!.y,
+          }
+        : base;
+      const pos = pushRightUntilFree({ x: Math.max(0, at.x), y: Math.max(0, at.y), ...sizes.get(n.id)!, isPinned: false }, placed);
       nodePositions.set(n.id, pos);
       placed.push(pos);
     }
@@ -111,13 +124,20 @@ function overlaps(a: NodePosition, b: NodePosition): boolean {
   return a.x < b.x + b.width + GAP && b.x < a.x + a.width + GAP && a.y < b.y + b.height + GAP && b.y < a.y + a.height + GAP;
 }
 
-function pushDownUntilFree(pos: NodePosition, placed: NodePosition[]): void {
+/**
+ * 겹치는 상자가 없을 때까지 오른쪽으로 민다.
+ * 계층형 배치에서 같은 줄은 같은 단계(형제)다. 아래로 밀면 형제가 세로로 쌓이고 선이 다른 상자 사이를 비집고 지나간다.
+ */
+function pushRightUntilFree(start: NodePosition, placed: NodePosition[]): NodePosition {
+  const pos = { ...start };
   for (let i = 0; i <= placed.length; i++) {
     const hit = placed.find((p) => overlaps(pos, p));
-    if (!hit) return;
-    pos.y = hit.y + hit.height + GAP;
+    if (!hit) break;
+    pos.x = hit.x + hit.width + GAP;
   }
+  return pos;
 }
+
 
 const DETOUR = 15; // 상자를 돌아갈 때 상자와 띄우는 거리(px)
 const MAX_DETOURS = 40;

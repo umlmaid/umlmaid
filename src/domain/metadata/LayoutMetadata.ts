@@ -18,6 +18,11 @@ export class LayoutMetadata {
     this.positions.set(nodeId, { ...pos });
   }
 
+  /** 자리를 잊게 한다. 다음 배치에서 새 노드처럼 다시 놓인다(고정 해제). */
+  removePosition(nodeId: string): void {
+    this.positions.delete(nodeId);
+  }
+
   /** 위치가 없는 ID는 새 좌표를 만들지 않고 무시한다. */
   setPinned(nodeId: string, pinned: boolean): void {
     const pos = this.positions.get(nodeId);
