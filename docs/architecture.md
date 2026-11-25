@@ -16,9 +16,9 @@
 **"무엇이 있나"는 코드에서, "어디에 있나"는 마우스에서 온다. 둘은 따로 저장하고, SyncManager가 둘을 합쳐 화면에 그린다.**
 
 이 원칙은 교수님 인터뷰에서 나왔다.
-- 객체 생성·관계 정의는 코드로, 이동은 마우스로 한다. (인터뷰 추가 요구사항)
+- 객체 생성과 관계 정의는 코드로, 나머지(이동·크기·이름·선 꺾기)는 마우스로 한다. (인터뷰 추가 요구사항)
 - Mermaid 문법에 위치 정보를 추가하지 않는다. (인터뷰 Q9)
-- 새 객체가 생겨도 기존 객체 위치는 유지한다. (인터뷰 Q3)
+- 새 객체가 생겨도 기존 객체 위치는 유지한다. 고정 여부와 상관없이 이미 놓인 객체는 움직이지 않는다. (인터뷰 Q3)
 
 ---
 
@@ -53,10 +53,10 @@
 | --- | --- | --- |
 | 시작 | TextEditor | CanvasRenderer |
 | 경로 | Workspace → SyncManager → MermaidParser → 좌표 병합 → LayoutEngine → 화면 | Workspace → SyncManager → LayoutMetadata → 화면 |
-| 바뀌는 것 | 다이어그램 구조(AbstractDiagram) | 좌표·고정 여부(LayoutMetadata)만 |
-| Mermaid 코드 | 사용자가 고친 대로 | **한 글자도 안 바뀜** |
+| 바뀌는 것 | 다이어그램 구조(AbstractDiagram) | 좌표·크기·고정 여부·간선 경로(LayoutMetadata)만 |
+| Mermaid 코드 | 사용자가 고친 대로 | **한 글자도 안 바뀜.** 예외: 이름 편집(FR-02-4)은 표준 별칭(`class Cat["고양이"]`)으로만 코드에 쓴 뒤 코드 수정 경로를 그대로 탄다 |
 | 시간 목표 | 1초 이내(NFR-01), 반영 300ms 이내(FR-03-1) | 300ms 이내(NFR-02) |
-| 시퀀스 다이어그램 | `시퀀스-코드수정.png` | `시퀀스-드래그.png` |
+| 시퀀스 다이어그램 | `diagrams/sequence-code-change.png` | `diagrams/sequence-drag.png` |
 
 ---
 
@@ -79,7 +79,7 @@
 ### 3.2 패턴별 설명
 
 **Facade: Workspace**
-- 화면은 Workspace의 메서드만 부른다: `moveNode`, `updateEdgeRoute`, `unpinNode`, `undo`, `redo`, `saveProject`, `loadProject`, `exportToImage`.
+- 화면은 Workspace의 메서드만 부른다: `editCode`, `moveNode`, `resizeNode`, `renameNode`, `updateEdgeRoute`, `unpinNode`, `unpinAll`, `undo`, `redo`, `saveProject`, `loadProject`, `exportToImage`.
 - 그 뒤에서 누가 일을 하는지는 Workspace가 정한다.
 
 **Mediator: SyncManager**
@@ -95,7 +95,10 @@
 
 **Strategy + Factory: LayoutEngine, LayoutEngineFactory**
 - 공통 규약: `applyLayout(diagram, metadata)`.
-- 두 엔진 모두 **`metadata`에서 `isPinned = true`인 노드의 좌표는 바꾸지 않는다.** 이 규칙은 인터페이스 수준의 약속이라, 엔진을 새로 추가해도 반드시 지켜야 한다(FR-04-2).
+- 두 엔진 모두 **`metadata`에 좌표가 있는 노드의 x, y는 바꾸지 않는다.** 이 규칙은 인터페이스 수준의 약속이라, 엔진을 새로 추가해도 반드시 지켜야 한다(FR-04-2, 인터뷰 Q3).
+  - 좌표는 두 가지다. 마우스로 옮긴 노드는 `isPinned = true`(핀 표시, 손으로 정한 크기 유지), 자동으로 처음 놓인 노드는 `isPinned = false`로 SyncManager가 기억해 둔다. 그래서 노드를 추가해도 기존 노드는 모두 제자리에 있고, 파일을 다시 열어도 같은 그림이 나온다.
+  - 고정 해제는 기억한 자리를 지운다(`removePosition`). 노드 하나를 풀면 그 노드만, 전체 고정 해제는 모든 노드를 처음부터 다시 배치한다(FR-04-4).
+  - 새 노드는 이미 놓인 이웃 노드를 기준으로 자리를 잡고, 다른 상자와 겹치면 같은 줄 오른쪽으로 비켜 놓는다.
 - `LayoutEngineFactory.getEngine(DiagramType)`이 CLASS면 Layered, SEQUENCE면 Sequence 엔진을 돌려준다.
 
 **Memento: Snapshot, VersionHistory**
@@ -114,8 +117,8 @@
 ---
 
 ## 4. 클래스 다이어그램
-- 패턴 표시본: `클래스다이어그램-패턴표시.png`
-- 원본 코드: `UMLet-Mermaid-클래스다이어그램-팀병합-1014.mmd`
+- 패턴 표시본: `diagrams/class-patterns.png`
+- 원본 코드: `diagrams/class-patterns.mmd` (10/14 팀 병합본에 결과물 반영)
 
 **읽는 법**
 - Workspace와 TextEditor·CanvasRenderer 사이에 선이 두 개 있다.
@@ -135,7 +138,7 @@
 2. SyncManager가 파싱한다.
    - 오류가 있으면 TextEditor에 오류를 알리고, 캔버스는 마지막 정상 상태를 유지한다(FR-03-5).
    - 성공하면 `mergeMetadata`로 기존 좌표·고정 정보를 옮긴다.
-3. Factory로 엔진을 고르고 `applyLayout`을 실행한다. 고정 노드는 그대로 두고 새 노드만 배치된다.
+3. Factory로 엔진을 고르고 `applyLayout`을 실행한다. 이미 놓인 노드는 고정 여부와 상관없이 그대로 두고 새 노드만 배치된다. 새로 놓인 노드의 자리는 SyncManager가 기억해 둔다.
 4. DiagramView로 화면에 알린다.
 
 ### 5.2 드래그 → 고정 → 실행취소
@@ -153,10 +156,10 @@
 | 모듈 | 계층 | 클래스 | 외부에 제공하는 것 | 의존하는 모듈 | 요구사항 | 담당 |
 | --- | --- | --- | --- | --- | --- | --- |
 | M1 파서·모델 | ③④ | MermaidParser, ParseResult, SyntaxError, AbstractDiagram 계층, DiagramType, RelationType | `parse(text) → ParseResult` | 없음 | FR-01-1~3, FR-05, FR-08 | |
-| M2 레이아웃 엔진 | ④ | LayoutEngine, LayeredLayoutEngine, SequenceLayoutEngine, LayoutEngineFactory, LayoutResult | `applyLayout(diagram, metadata) → LayoutResult` | M1, M3 | FR-04-1~3, NFR-01 | |
-| M3 좌표 메타데이터 | ④ | LayoutMetadata, NodePosition, EdgeRoute, Point | 좌표·고정·간선경로 읽기/쓰기, JSON 변환 | M1 | FR-04-2·4·7, DF-02 | |
+| M2 레이아웃 엔진 | ④ | LayoutEngine, LayeredLayoutEngine, SequenceLayoutEngine, LayoutEngineFactory, LayoutResult | `applyLayout(diagram, metadata) → LayoutResult` | M1, M3 | FR-04-1~3·7, NFR-01 | |
+| M3 좌표 메타데이터 | ④ | LayoutMetadata, NodePosition, EdgeRoute, Point | 좌표·크기·고정·간선경로 읽기/쓰기/지우기, JSON 변환 | M1 | FR-04-2·4·7, DF-02 | |
 | M4 동기화·흐름 | ② | Workspace, SyncManager, DiagramView | 화면용 메서드 전체, `onDiagramUpdated` 알림 | M1, M2, M3, M6 | FR-03, NFR-02 | |
-| M5 화면 | ① | TextEditor, CanvasRenderer | 화면, 입력 이벤트 | M4 | FR-01-4, FR-02-1·3, FR-07, NFR-07 | |
+| M5 화면 | ① | TextEditor, CanvasRenderer | 화면, 입력 이벤트 | M4 | FR-01-4, FR-02-1~4, FR-07, NFR-07 | |
 | M6 저장·버전·내보내기 | ②③ | VersionHistory, Snapshot, FileManager, DiagramData, ImageExporter, ImageFormat | 저장·불러오기, 실행취소·버전, PNG·JPEG 내보내기 | M3 | FR-09, FR-10, DF-01·03 | |
 
 **개발 순서 제안:** 의존이 없는 것부터 만든다.
@@ -175,8 +178,8 @@
 | ID | 내용 | 제안 |
 | --- | --- | --- |
 | D-01 | ~~ImageExporter가 CanvasRenderer를 의존해 계층 규칙에 어긋남~~ | **해결:** CanvasRenderer 객체 대신 화면에 그려진 SVG 요소를 넘긴다(`export(canvasSvg, format, scale)`). |
-| D-02 | ~~Snapshot 적용 메서드 없음~~ | **해결:** `SyncManager.restore(snapshot)` 추가 |
-| D-03 | ~~Snapshot 저장 시점~~ | **결정:** 드래그·간선 수정·고정 해제는 반영될 때마다 저장한다. 코드는 파싱에 성공하고 입력이 0.5초 멈췄을 때 저장한다(`Workspace.ts`). |
+| D-02 | ~~Snapshot 적용 메서드 없음~~ | **해결:** `SyncManager.restoreState(snapshot)` 추가 |
+| D-03 | ~~Snapshot 저장 시점~~ | **결정:** 드래그·크기 조절·이름 편집·간선 수정·고정 해제는 반영될 때마다 저장한다. 코드는 파싱에 성공하고 입력이 0.5초 멈췄을 때 저장한다(`Workspace.ts`). |
 | D-04 | ~~좌표 저장 위치~~ | **결정:** 같은 파일 맨 끝 한 줄 `%% @umlmaid-layout {JSON}` |
 | D-05 | ~~레이아웃 엔진 구현 방식~~ | **결정:** elkjs 사용 |
 | D-06 | ~~실행 환경·언어~~ | **결정:** TypeScript + React + Vite (웹) |
