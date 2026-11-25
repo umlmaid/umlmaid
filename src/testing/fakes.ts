@@ -20,11 +20,8 @@ export class FakeLayoutEngine implements LayoutEngine {
   async applyLayout(diagram: AbstractDiagram, metadata: LayoutMetadata): Promise<LayoutResult> {
     const nodePositions = new Map<string, NodePosition>();
     diagram.nodes.forEach((node, i) => {
-      const pinned = metadata.getPosition(node.id);
-      nodePositions.set(
-        node.id,
-        pinned?.isPinned ? pinned : { x: i * 200, y: 0, width: 160, height: 80, isPinned: false },
-      );
+      const saved = metadata.getPosition(node.id);
+      nodePositions.set(node.id, saved ? { ...saved } : { x: i * 200, y: 0, width: 160, height: 80, isPinned: false });
     });
     const edgeRoutes = new Map<string, EdgeRoute>();
     for (const edge of diagram.edges) {
@@ -82,6 +79,10 @@ export class InMemoryLayoutMetadata extends LayoutMetadata {
 
   override setPosition(nodeId: string, p: NodePosition): void {
     this.pos.set(nodeId, { ...p });
+  }
+
+  override removePosition(nodeId: string): void {
+    this.pos.delete(nodeId);
   }
 
   override setPinned(nodeId: string, pinned: boolean): void {

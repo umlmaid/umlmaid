@@ -6,7 +6,8 @@ import type { LayoutResult } from './LayoutResult';
 
 /**
  * 모든 구현이 지켜야 하는 약속:
- * 1. metadata에서 isPinned = true인 노드의 x, y는 결과에서도 그대로다.
+ * 1. metadata에 좌표가 있는 노드의 x, y는 결과에서도 그대로다(isPinned와 상관없이).
+ *    인터뷰: "새 객체가 추가될 때 적절한 위치로 자동 배치되지만 기존 객체의 배치가 바뀌면 안됨".
  * 2. metadata에서 isManual = true인 간선 경로는 결과에서도 그대로다.
  * 3. 연결선이 없는 노드도 결과에 위치가 있어야 한다.
  * 4. 노드 30개 기준 1초 안에 끝난다(NFR-01).

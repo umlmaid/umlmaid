@@ -47,7 +47,6 @@ function edgesThroughBoxes(diagram: { edges: { id: string; sourceId: string; tar
 }
 
 /** Animal 상자 위치 */
-const before0 = (l: LayoutResult) => l.nodePositions.get('Animal')!;
 
 const ANIMALS = 'classDiagram\n  Animal <|-- Dog\n  Animal <|-- Cat\n  Animal <|-- Cow';
 
@@ -92,8 +91,15 @@ describe('M1 파서 + M2 레이아웃 + M3 좌표 + M4 흐름', () => {
     await sync.onCanvasEdgeRouteChanged('Cat-INHERITANCE-Animal', [{ x: 400, y: 150 }]);
     await sync.onTextChanged(`${ANIMALS}\n  class Bird\n  Animal <|-- Bird`);
     expect(edgesThroughBoxes(lastDiagram(), lastLayout())).toEqual([]);
-    // 노드를 다른 노드들 사이로 끌어다 놓은 경우도
-    await sync.onCanvasNodeMoved('Bird', before0(lastLayout()).x, before0(lastLayout()).y + 150);
+    // 노드를 다른 선 위(Animal과 Cow 사이 빈자리)로 끌어다 놓은 경우도
+    const pos = lastLayout().nodePositions;
+    const mid = (id: string) => ({ x: pos.get(id)!.x + pos.get(id)!.width / 2, y: pos.get(id)!.y + pos.get(id)!.height / 2 });
+    const bird = pos.get('Bird')!;
+    const x = (mid('Animal').x + mid('Cow').x) / 2 - bird.width / 2;
+    const y = (mid('Animal').y + mid('Cow').y) / 2 - bird.height / 2;
+    await sync.onCanvasNodeMoved('Bird', x, y);
+    const moved = lastLayout().nodePositions;
+    expect([...moved].filter(([id, p]) => id !== 'Bird' && overlaps(p, moved.get('Bird')!))).toEqual([]);
     expect(edgesThroughBoxes(lastDiagram(), lastLayout())).toEqual([]);
   });
 
@@ -124,5 +130,38 @@ describe('M1 파서 + M2 레이아웃 + M3 좌표 + M4 흐름', () => {
     const ys = [...edgeRoutes.values()].map((r) => r.waypoints[0].y);
     expect(ys).toHaveLength(2);
     expect(ys[0]).toBeLessThan(ys[1]);
+  });
+
+  // 인터뷰: "새 객체가 추가될 때 적절한 위치로 자동 배치되지만 기존 객체의 배치가 바뀌면 안됨"
+  const additions: [string, string, string][] = [
+    ['자식 추가', ANIMALS, '\n  Animal <|-- Bird'],
+    ['새 부모 추가', ANIMALS, '\n  LivingThing <|-- Animal'],
+    ['연결 없는 객체 추가', ANIMALS, '\n  class Zoo'],
+    ['여러 단계 구조에 추가', 'classDiagram\n  A <|-- B\n  A <|-- C\n  B <|-- D\n  C <|-- E\n  D --> E', '\n  B <|-- F'],
+  ];
+  for (const [name, before, added] of additions) {
+    it(`객체를 추가해도 손대지 않은 기존 객체는 움직이지 않고, 새 객체는 겹치지 않는다: ${name}`, async () => {
+      const { sync, lastLayout } = setup();
+      await sync.onTextChanged(before);
+      const prev = new Map(lastLayout().nodePositions);
+      await sync.onTextChanged(before + added);
+      const next = lastLayout().nodePositions;
+      for (const [id, p] of prev) expect(next.get(id), id).toMatchObject({ x: p.x, y: p.y });
+      for (const [id, p] of next) {
+        if (prev.has(id)) continue;
+        for (const [other, q] of next) if (other !== id) expect(overlaps(p, q), `${id}·${other}`).toBe(false);
+      }
+    });
+  }
+
+  it('전체 고정 해제를 누르면 처음부터 다시 배치한다 (FR-04-4)', async () => {
+    const { sync, lastLayout } = setup();
+    await sync.onTextChanged(ANIMALS);
+    const fresh = new Map(lastLayout().nodePositions);
+    await sync.onTextChanged('classDiagram\n  class Zoo\n  Animal <|-- Dog\n  Animal <|-- Cat\n  Animal <|-- Cow');
+    await sync.onTextChanged(ANIMALS);
+    await sync.onCanvasNodeMoved('Dog', 600, 0);
+    expect(await sync.unpinAll()).toBe(true);
+    for (const [id, p] of fresh) expect(lastLayout().nodePositions.get(id), id).toMatchObject({ x: p.x, y: p.y, isPinned: false });
   });
 });

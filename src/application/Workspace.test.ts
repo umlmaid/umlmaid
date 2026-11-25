@@ -57,7 +57,7 @@ describe('실행취소·다시실행', () => {
     await workspace.moveNode('A', 500, 300);
 
     await workspace.undo();
-    expect(sync.metadata.getPosition('A')).toBeUndefined();
+    expect(sync.metadata.getPosition('A')).toMatchObject({ x: 0, y: 0, isPinned: false });
     expect(sync.text).toBe('class A');
 
     await workspace.redo();
