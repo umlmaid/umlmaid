@@ -18,13 +18,11 @@ Node.js 22 이상이 필요합니다.
 | 모듈 | 폴더 | 내용 |
 | --- | --- | --- |
 | M1 파서·모델 | `src/domain/model`, `src/infrastructure/parser` | Mermaid 코드 → AbstractDiagram |
-| M2 레이아웃 엔진 | `src/domain/layout` | 자동 배치 (elkjs). 고정 노드는 움직이지 않음 |
-| M3 좌표 메타데이터 | `src/domain/metadata`, `src/presentation/DragController.ts` | 좌표·고정 여부·수동 간선 경로, 캔버스 드래그 입력 처리 |
+| M2 레이아웃 엔진 | `src/domain/layout` | 자동 배치 (elkjs). 이미 자리가 있는 노드는 움직이지 않고 새 노드만 배치 |
+| M3 좌표 메타데이터 | `src/domain/metadata`, `src/presentation/DragController.ts` | 좌표·크기·고정 여부·수동 간선 경로, 캔버스 드래그·크기 조절 입력 처리 |
 | M4 동기화·흐름 | `src/application` (Workspace, SyncManager, DiagramView) | 전체 연결, 통합 책임 |
 | M5 화면 | `src/presentation` (DragController 제외) | 코드 편집기, 캔버스 그리기, 줌, 버튼 |
 | M6 저장·버전·내보내기 | `src/application` (VersionHistory, Snapshot), `src/infrastructure/file`, `src/infrastructure/export` | 파일, 실행취소, PNG·JPEG |
-
-구현할 곳은 `todo('Mn')`으로 표시되어 있습니다. 자기 모듈의 `todo`를 채우면 됩니다.
 
 폴더별 담당자는 [`.github/CODEOWNERS`](.github/CODEOWNERS)에 있습니다. PR이 그 폴더를 건드리면 담당자에게 알림이 갑니다.
 
@@ -32,8 +30,9 @@ Node.js 22 이상이 필요합니다.
 
 1. **계층 규칙.** `presentation → application → infrastructure → domain` 방향으로만 import한다. `domain`은 다른 폴더를 import하지 않는다.
 2. **공통 타입은 함부로 바꾸지 않는다.** `src/domain/**`의 타입과 `LayoutEngine`, `DiagramView` 인터페이스는 모든 모듈이 쓴다. 바꾸려면 그 타입을 쓰는 모듈 담당자에게 먼저 알린다.
-3. **마우스 조작은 Mermaid 코드를 바꾸지 않는다.** 좌표는 `LayoutMetadata`에만 쓴다.
-4. **객체 생성은 코드로만.** 캔버스에서 노드·관계를 만들지 않는다.
+3. **마우스 조작은 Mermaid 코드를 바꾸지 않는다.** 좌표·크기는 `LayoutMetadata`에만 쓴다.
+   - 예외: 노드 더블클릭 이름 편집(FR-02-4)은 표준 Mermaid 별칭(`class Cat["고양이"]`, `participant A as 이름`)으로만 코드에 쓴다. ID와 관계는 바꾸지 않는다.
+4. **객체 생성과 관계 정의는 코드로만.** 캔버스에서 노드·관계를 만들지 않는다. 그 밖의 편집(이동·크기·이름·선 꺾기)은 마우스로 한다(인터뷰: "객체 생성과 관계성은 코드로, 나머지는 마우스로").
 5. **좌표 단위는 픽셀**(캔버스 100% 배율 기준)이다.
 6. **좌표 저장 형식:** 파일 맨 끝 한 줄 `%% @umlmaid-layout {JSON}`
 

@@ -42,6 +42,10 @@ classDiagram
         +unpinNode(nodeId: String) void
         %% [11/11 최종 문서] 전체 고정 해제(FR-04-4), 버튼 활성화 여부
         +unpinAll() void
+        %% [11/25 결과물 반영] 코드 입력, 크기 조절(FR-02-2), 이름 편집(FR-02-4)
+        +editCode(text: String) void
+        +resizeNode(nodeId: String, x: double, y: double, width: double, height: double) void
+        +renameNode(nodeId: String, label: String) void
         +canUndo() boolean
         +canRedo() boolean
     }
@@ -83,6 +87,11 @@ classDiagram
         +onCanvasEdgeRouteChanged(edgeId: String, waypoints: List~Point~) void
         +unpinNode(nodeId: String) void
         +unpinAll() void
+        %% [11/25 결과물 반영] 크기 조절(FR-02-2), 이름 편집(FR-02-4), 실행취소·파일 열기
+        +onCanvasNodeResized(nodeId: String, x: double, y: double, width: double, height: double) void
+        +renameNode(nodeId: String, label: String) void
+        +restoreState(snapshot: Snapshot) void
+        +load(text: String, metadataJson: String) void
         -mergeMetadata(oldMeta: LayoutMetadata, newDiagram: AbstractDiagram) LayoutMetadata
         -notifyViews(diagram: AbstractDiagram, layout: LayoutResult) void
     }
@@ -164,6 +173,8 @@ classDiagram
         +getPosition(nodeId: String) NodePosition
         +setPosition(nodeId: String, pos: NodePosition) void
         +setPinned(nodeId: String, pinned: boolean) void
+        %% [11/25 결과물 반영] 고정 해제 시 기억한 자리를 지운다
+        +removePosition(nodeId: String) void
         +getEdgeRoute(edgeId: String) EdgeRoute
         +setEdgeRoute(edgeId: String, route: EdgeRoute) void
     }
