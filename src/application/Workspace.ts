@@ -5,9 +5,13 @@
 //   - 드래그·간선 수정·고정 해제는 반영될 때마다 Snapshot 1개
 //   - 코드는 입력이 CODE_SNAPSHOT_DELAY_MS 동안 멈췄을 때 Snapshot 1개 (한 글자마다 쌓지 않는다)
 //   - 실행취소·다시실행 자체는 기록하지 않는다
+//   - 버전 되돌리기는 Snapshot 1개 (실행취소로 되돌리기 전 상태로 돌아갈 수 있다)
+//
+// 버전 저장(SavedVersions)은 실행취소 기록과 따로 보관하고, 프로젝트 파일에 함께 저장한다.
 import type { Point } from '../domain/metadata/geometry';
 import { ImageExporter, ImageFormat } from '../infrastructure/export/ImageExporter';
 import { FileManager } from '../infrastructure/file/FileManager';
+import { type SavedVersion, SavedVersions } from './SavedVersions';
 import type { Snapshot } from './Snapshot';
 import { SyncManager } from './SyncManager';
 import { VersionHistory } from './VersionHistory';
@@ -17,6 +21,7 @@ export const CODE_SNAPSHOT_DELAY_MS = 500;
 export class Workspace {
   private codeSnapshotTimer?: ReturnType<typeof setTimeout>;
   private snapshotCount = 0;
+  private versions = new SavedVersions();
 
   constructor(
     readonly syncManager = new SyncManager(),
@@ -82,16 +87,39 @@ export class Workspace {
     await this.restoreSnapshot(this.history.redo());
   }
 
-  /** 문법 오류가 있어도 편집기에 있는 코드 그대로 저장한다 */
-  saveProject(): Blob {
-    return this.fileManager.save(this.syncManager.text, this.syncManager.metadata.toJson());
+  /** 지금 코드와 배치를 이름 붙은 버전으로 남긴다. 이름이 비어 있으면 "버전 N" */
+  saveVersion(name: string): SavedVersion {
+    return this.versions.add(name, this.syncManager.text, this.syncManager.metadata.toJson());
   }
 
-  /** 다른 파일을 열면 이전 파일의 실행취소 기록은 버린다. 연 상태가 첫 기록이 된다. */
+  listVersions(): SavedVersion[] {
+    return this.versions.list();
+  }
+
+  /** 저장해 둔 버전으로 되돌린다. 되돌리기도 실행취소할 수 있다. */
+  async restoreVersion(id: string): Promise<void> {
+    const version = this.versions.get(id);
+    if (!version) return;
+    this.flushPendingCodeSnapshot();
+    await this.syncManager.restoreState(version);
+    this.captureSnapshot();
+  }
+
+  deleteVersion(id: string): boolean {
+    return this.versions.remove(id);
+  }
+
+  /** 문법 오류가 있어도 편집기에 있는 코드 그대로 저장한다. 저장한 버전도 함께 들어간다. */
+  saveProject(): Blob {
+    return this.fileManager.save(this.syncManager.text, this.syncManager.metadata.toJson(), this.versions.toJson());
+  }
+
+  /** 다른 파일을 열면 이전 파일의 실행취소 기록과 버전은 버린다. 연 상태가 첫 기록이 된다. */
   async loadProject(file: File): Promise<void> {
     const data = await this.fileManager.load(file);
     clearTimeout(this.codeSnapshotTimer);
     this.codeSnapshotTimer = undefined;
+    this.versions = readVersions(data.versions ?? '');
     if (!(await this.syncManager.load(data.code, data.metadata))) return;
     this.history.reset();
     this.pushSnapshot(this.syncManager.text, this.syncManager.metadata.toJson());
@@ -128,5 +156,14 @@ export class Workspace {
       timestamp: new Date(),
     };
     this.history.push(snapshot);
+  }
+}
+
+/** 버전 줄이 깨져 있어도 파일은 열리게, 그 경우 버전만 버린다 */
+function readVersions(json: string): SavedVersions {
+  try {
+    return SavedVersions.fromJson(json);
+  } catch {
+    return new SavedVersions();
   }
 }
