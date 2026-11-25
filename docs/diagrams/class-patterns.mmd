@@ -46,6 +46,11 @@ classDiagram
         +editCode(text: String) void
         +resizeNode(nodeId: String, x: double, y: double, width: double, height: double) void
         +renameNode(nodeId: String, label: String) void
+        %% [11/25 결과물 반영] 이름 붙은 버전 저장·되돌리기(인터뷰 "버전 버튼?")
+        +saveVersion(name: String) SavedVersion
+        +listVersions() List~SavedVersion~
+        +restoreVersion(id: String) void
+        +deleteVersion(id: String) boolean
         +canUndo() boolean
         +canRedo() boolean
     }
@@ -110,6 +115,23 @@ classDiagram
         +list() List~Snapshot~
     }
 
+    %% [11/25 결과물 반영] 실행취소 기록과 따로 보관하는 이름 붙은 버전. 파일에 함께 저장
+    class SavedVersions {
+        <<Caretaker>>
+        -versions : List~SavedVersion~
+        +add(name: String, textState: String, metadataState: String) SavedVersion
+        +get(id: String) SavedVersion
+        +remove(id: String) boolean
+        +list() List~SavedVersion~
+        +toJson() String
+        +fromJson(json: String)$ SavedVersions
+    }
+
+    class SavedVersion {
+        <<Memento>>
+        +name : String
+    }
+
     class Snapshot {
         <<Memento>>
         %% [10/14 보완] 버전 식별자
@@ -120,7 +142,7 @@ classDiagram
     }
 
     class FileManager {
-        +save(code: String, metadata: String) File
+        +save(code: String, metadata: String, versions: String) File
         +load(file: File) DiagramData
     }
 
@@ -132,6 +154,7 @@ classDiagram
     class DiagramData {
         +code : String
         +metadata : String
+        +versions : String
     }
 
     class Point {
@@ -274,6 +297,9 @@ classDiagram
     Workspace "1" ..> "1" FileManager : uses
     Workspace "1" ..> "1" ImageExporter : uses
     VersionHistory "1" o-- "*" Snapshot : aggregates
+    Workspace "1" *-- "1" SavedVersions
+    SavedVersions "1" o-- "*" SavedVersion : aggregates
+    Snapshot <|-- SavedVersion
     FileManager "1" ..> "1" DiagramData : produces
     ImageExporter "1" ..> "1" ImageFormat : uses
 

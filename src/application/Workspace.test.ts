@@ -124,3 +124,54 @@ describe('실행취소·다시실행', () => {
     expect(sync.text).toBe('class Z');
   });
 });
+
+describe('버전 저장 (인터뷰 추가: "버전 버튼?")', () => {
+  it('저장한 버전으로 되돌리고, 되돌리기도 실행취소할 수 있다', async () => {
+    const { sync, workspace } = setup();
+    await workspace.editCode('class A');
+    await workspace.moveNode('A', 500, 300);
+    const v1 = workspace.saveVersion('초안');
+    await workspace.editCode('class A\nclass B');
+    vi.advanceTimersByTime(CODE_SNAPSHOT_DELAY_MS);
+
+    await workspace.restoreVersion(v1.id);
+    expect(sync.text).toBe('class A');
+    expect(sync.metadata.getPosition('A')).toMatchObject({ x: 500, y: 300, isPinned: true });
+
+    await workspace.undo();
+    expect(sync.text).toBe('class A\nclass B');
+  });
+
+  it('새로 고쳐 실행취소 기록이 갈라져도 버전은 남는다', async () => {
+    const { workspace } = setup();
+    await workspace.editCode('class A');
+    workspace.saveVersion('');
+    await workspace.undo();
+    await workspace.editCode('class Z');
+    vi.advanceTimersByTime(CODE_SNAPSHOT_DELAY_MS);
+    expect(workspace.listVersions().map((v) => [v.name, v.textState])).toEqual([['버전 1', 'class A']]);
+  });
+
+  it('버전을 지울 수 있다', async () => {
+    const { workspace } = setup();
+    await workspace.editCode('class A');
+    const v = workspace.saveVersion('지울 것');
+    expect(workspace.deleteVersion(v.id)).toBe(true);
+    expect(workspace.listVersions()).toEqual([]);
+  });
+
+  it('파일로 저장했다가 열면 버전도 돌아온다. 다른 파일을 열면 이전 버전은 사라진다', async () => {
+    const { workspace } = setup();
+    await workspace.editCode('class A');
+    workspace.saveVersion('초안');
+    const blob = workspace.saveProject();
+
+    const other = setup().workspace;
+    await other.loadProject(new File([await blob.text()], 'a.mmd'));
+    expect(other.listVersions().map((v) => [v.name, v.textState])).toEqual([['초안', 'class A']]);
+
+    await other.loadProject(new File(['class Q'], 'b.mmd'));
+    expect(other.listVersions()).toEqual([]);
+  });
+});
+

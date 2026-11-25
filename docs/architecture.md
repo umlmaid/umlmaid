@@ -79,7 +79,7 @@
 ### 3.2 패턴별 설명
 
 **Facade: Workspace**
-- 화면은 Workspace의 메서드만 부른다: `editCode`, `moveNode`, `resizeNode`, `renameNode`, `updateEdgeRoute`, `unpinNode`, `unpinAll`, `undo`, `redo`, `saveProject`, `loadProject`, `exportToImage`.
+- 화면은 Workspace의 메서드만 부른다: `editCode`, `moveNode`, `resizeNode`, `renameNode`, `updateEdgeRoute`, `unpinNode`, `unpinAll`, `undo`, `redo`, `saveVersion`, `listVersions`, `restoreVersion`, `deleteVersion`, `saveProject`, `loadProject`, `exportToImage`.
 - 그 뒤에서 누가 일을 하는지는 Workspace가 정한다.
 
 **Mediator: SyncManager**
@@ -106,6 +106,11 @@
 - Workspace는 변경 직전에 `VersionHistory.push()`로 상태를 저장한다. `undo()`·`redo()`·`restore(id)`로 되돌린다.
 - 대상이 노드 30개 규모라 상태를 통째로 저장해도 부담이 작다. 그래서 Command 패턴 대신 Memento 하나로 실행취소와 버전 기능을 함께 처리한다.
 - FileManager도 같은 두 문자열(code, metadata)을 저장한다. 저장 형식이 하나로 통일된다.
+- **버전 저장(인터뷰 추가: "버전 버튼?", OQ-01):** "버전 저장" 버튼을 누르면 지금 상태를 이름 붙은 Snapshot(`SavedVersion`)으로 `SavedVersions`에 남긴다.
+  - 실행취소 기록과 따로 둔다. 실행취소 기록은 되돌린 뒤 새로 고치면 뒤쪽이 버려지지만, 버전은 사용자가 지울 때까지 남는다.
+  - 목록에서 골라 되돌릴 수 있고, 되돌리기도 실행취소할 수 있다.
+  - 프로젝트 파일에 함께 저장되어, 다음에 파일을 열어도 버전이 남아 있다(D-04).
+  - OQ-01 해석: "버전"을 그림 작업의 저장 지점으로 보았다(팀 판단). 교수님 확인이 필요하다.
 
 ### 3.3 검토했지만 쓰지 않은 패턴
 | 패턴 | 쓰지 않은 이유 |
@@ -180,7 +185,7 @@
 | D-01 | ~~ImageExporter가 CanvasRenderer를 의존해 계층 규칙에 어긋남~~ | **해결:** CanvasRenderer 객체 대신 화면에 그려진 SVG 요소를 넘긴다(`export(canvasSvg, format, scale)`). |
 | D-02 | ~~Snapshot 적용 메서드 없음~~ | **해결:** `SyncManager.restoreState(snapshot)` 추가 |
 | D-03 | ~~Snapshot 저장 시점~~ | **결정:** 드래그·크기 조절·이름 편집·간선 수정·고정 해제는 반영될 때마다 저장한다. 코드는 파싱에 성공하고 입력이 0.5초 멈췄을 때 저장한다(`Workspace.ts`). |
-| D-04 | ~~좌표 저장 위치~~ | **결정:** 같은 파일 맨 끝 한 줄 `%% @umlmaid-layout {JSON}` |
+| D-04 | ~~좌표 저장 위치~~ | **결정:** 같은 파일 맨 끝 한 줄 `%% @umlmaid-layout {JSON}`. 저장한 버전이 있으면 그 바로 앞 줄에 `%% @umlmaid-versions {JSON}`. 둘 다 Mermaid 주석이라 문법을 추가하지 않는다(Q9). |
 | D-05 | ~~레이아웃 엔진 구현 방식~~ | **결정:** elkjs 사용 |
 | D-06 | ~~실행 환경·언어~~ | **결정:** TypeScript + React + Vite (웹) |
 

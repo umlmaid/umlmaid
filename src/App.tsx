@@ -1,6 +1,7 @@
 // 담당: M5 화면
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
+import type { SavedVersion } from './application/SavedVersions';
 import { createWorkspace } from './composition';
 import { ImageFormat } from './infrastructure/export/ImageExporter';
 import { CanvasViewport } from './presentation/CanvasViewport';
@@ -33,6 +34,15 @@ function downloadBlob(blob: Blob, filename: string): void {
     }
 }
 
+function versionTime(date: Date): string {
+    return date.toLocaleString('ko-KR', {
+        month: 'numeric',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+}
+
 function imageFilename(projectName: string, format: ImageFormat): string {
     const stem = projectName.replace(/\.(mmd|mermaid|txt)$/i, '') || 'umlmaid';
     return `${stem}.${format === ImageFormat.PNG ? 'png' : 'jpg'}`;
@@ -54,6 +64,8 @@ export function App() {
         undo: false,
         redo: false,
     });
+    const [versions, setVersions] = useState<SavedVersion[]>([]);
+    const [versionName, setVersionName] = useState('');
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const canvasRegionRef = useRef<HTMLDivElement>(null);
@@ -80,6 +92,7 @@ export function App() {
             undo: workspace.canUndo,
             redo: workspace.canRedo,
         });
+        setVersions(workspace.listVersions());
     }, [workspace]);
 
     const report = useCallback((error: unknown) => {
@@ -175,6 +188,12 @@ export function App() {
             }
         });
     };
+
+    const saveVersion = () =>
+        runAction('버전 저장', async () => {
+            workspace.saveVersion(versionName);
+            setVersionName('');
+        });
 
     const canExport =
         !!diagram?.nodes.length &&
@@ -351,6 +370,119 @@ export function App() {
                             전체 고정 해제
                         </button>
                     </div>
+
+                    <details
+                        style={{
+                            padding: '0 8px 6px',
+                            fontSize: 13,
+                        }}
+                    >
+                        <summary style={{ cursor: 'pointer' }}>
+                            버전 ({versions.length})
+                        </summary>
+
+                        <form
+                            onSubmit={(event) => {
+                                event.preventDefault();
+                                void saveVersion();
+                            }}
+                            style={{
+                                display: 'flex',
+                                gap: 6,
+                                marginTop: 6,
+                            }}
+                        >
+                            <input
+                                type="text"
+                                aria-label="버전 이름"
+                                placeholder="버전 이름 (비우면 자동)"
+                                value={versionName}
+                                maxLength={40}
+                                onChange={(event) =>
+                                    setVersionName(event.currentTarget.value)
+                                }
+                                style={{ flex: 1, minWidth: 0, font: 'inherit' }}
+                            />
+
+                            <button type="submit" disabled={!!busy || parsing}>
+                                버전 저장
+                            </button>
+                        </form>
+
+                        <p style={{ margin: '6px 0 0', color: '#59636f', fontSize: 12 }}>
+                            {versions.length === 0
+                                ? '저장한 버전이 없습니다. '
+                                : ''}
+                            파일로 저장하면 버전도 함께 저장됩니다.
+                        </p>
+
+                        {versions.length > 0 && (
+                            <ul
+                                aria-label="저장한 버전"
+                                style={{
+                                    listStyle: 'none',
+                                    margin: '6px 0 0',
+                                    padding: 0,
+                                    maxHeight: 160,
+                                    overflowY: 'auto',
+                                }}
+                            >
+                                {[...versions].reverse().map((version) => (
+                                    <li
+                                        key={version.id}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 6,
+                                            padding: '3px 0',
+                                        }}
+                                    >
+                                        <span
+                                            title={version.name}
+                                            style={{
+                                                flex: 1,
+                                                minWidth: 0,
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                whiteSpace: 'nowrap',
+                                            }}
+                                        >
+                                            {version.name}
+                                            <span style={{ color: '#59636f', marginLeft: 6 }}>
+                                                {versionTime(version.timestamp)}
+                                            </span>
+                                        </span>
+
+                                        <button
+                                            type="button"
+                                            disabled={!!busy || parsing}
+                                            title="이 버전으로 되돌립니다. 실행취소로 되돌리기 전 상태로 돌아갈 수 있습니다."
+                                            onClick={() =>
+                                                void runAction('버전 되돌리기', () =>
+                                                    workspace.restoreVersion(version.id),
+                                                )
+                                            }
+                                        >
+                                            되돌리기
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            disabled={!!busy}
+                                            aria-label={`${version.name} 삭제`}
+                                            onClick={() =>
+                                                void runAction('버전 삭제', async () => {
+                                                    workspace.deleteVersion(version.id);
+                                                })
+                                            }
+                                        >
+                                            삭제
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </details>
 
                     <div
                         role="status"

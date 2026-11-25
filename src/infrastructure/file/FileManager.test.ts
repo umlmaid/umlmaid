@@ -1,7 +1,7 @@
 // 담당: M6 저장·버전·내보내기
 import { describe, expect, it } from 'vitest';
 import { LayoutMetadata } from '../../domain/metadata/LayoutMetadata';
-import { FileManager, LAYOUT_MARKER } from './FileManager';
+import { FileManager, LAYOUT_MARKER, VERSIONS_MARKER } from './FileManager';
 
 const fm = new FileManager();
 const META = '{"positions":{"A":{"x":10,"y":20,"width":120,"height":60,"isPinned":true}},"edgeRoutes":{}}';
@@ -80,5 +80,29 @@ describe('FileManager.save / load', () => {
     const blob = fm.save(code, META);
     const file = new File([blob], 'diagram.mmd');
     expect(await fm.load(file)).toEqual({ code, metadata: META });
+  });
+});
+
+describe('저장한 버전 줄', () => {
+  const VERSIONS = '[{"id":"version-1","name":"초안","textState":"class A","metadataState":"","timestamp":"2026-11-25T01:00:00.000Z"}]';
+
+  it('버전 줄은 좌표 줄 바로 앞에 붙고, 읽으면 셋 다 돌아온다', () => {
+    const file = fm.serialize({ code: CODE, metadata: META, versions: VERSIONS });
+    expect(file).toBe(`${CODE}\n${VERSIONS_MARKER}${VERSIONS}\n${LAYOUT_MARKER}${META}`);
+    expect(fm.deserialize(file)).toEqual({ code: CODE, metadata: META, versions: VERSIONS });
+  });
+
+  it('좌표 없이 버전만 있어도 읽는다', () => {
+    const file = fm.serialize({ code: CODE, metadata: '', versions: VERSIONS });
+    expect(fm.deserialize(file)).toEqual({ code: CODE, metadata: '', versions: VERSIONS });
+  });
+
+  it('버전이 없으면 예전 형식 그대로다', () => {
+    expect(fm.serialize({ code: CODE, metadata: META, versions: '' })).toBe(`${CODE}\n${LAYOUT_MARKER}${META}`);
+  });
+
+  it('버전 JSON이 깨져 있으면 버전만 버리고 코드와 좌표는 연다', () => {
+    const file = `${CODE}\n${VERSIONS_MARKER}[깨짐\n${LAYOUT_MARKER}${META}`;
+    expect(fm.deserialize(file)).toEqual({ code: CODE, metadata: META, versions: '' });
   });
 });
